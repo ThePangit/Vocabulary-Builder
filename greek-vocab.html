@@ -99,6 +99,39 @@
     .list-item:hover .list-item-del { opacity: 0.7; }
     .list-item-del:hover { opacity: 1 !important; }
 
+    .list-item-exp {
+      opacity: 0; cursor: pointer; color: var(--gold); font-size: 0.95rem;
+      padding: 0 4px; line-height: 1; transition: opacity 0.15s;
+      background: none; border: none;
+    }
+    .list-item:hover .list-item-exp { opacity: 0.7; }
+    .list-item-exp:hover { opacity: 1 !important; }
+
+    /* Sidebar footer */
+    #sidebar-footer {
+      display: flex; flex-direction: column; gap: 6px; padding: 10px;
+      border-top: 1px solid var(--border);
+    }
+    #sync-status {
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      border-radius: 6px; border: 1px solid var(--border); cursor: pointer;
+      transition: all 0.15s; margin-bottom: 2px;
+    }
+    #sync-status:hover { border-color: var(--border2); background: var(--bg3); }
+    #sync-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--muted);
+      flex-shrink: 0; transition: background 0.3s;
+    }
+    #sync-label { font-size: 0.8rem; color: var(--muted); font-family: var(--font-body); }
+    .sidebar-footer-row { display: flex; gap: 6px; }
+    .sidebar-footer-btn {
+      flex: 1; padding: 9px 6px; border-radius: 6px;
+      border: 1px solid var(--border2); background: none;
+      color: var(--muted); font-family: var(--font-body); font-size: 0.82rem;
+      cursor: pointer; text-align: center; transition: all 0.15s; display: block;
+    }
+    .sidebar-footer-btn:hover { color: var(--gold-lt); border-color: var(--gold); background: rgba(201,146,58,0.08); }
+
     #btn-new-list {
       margin: 10px; padding: 10px; border-radius: 6px; border: 1px dashed var(--border2);
       background: none; color: var(--gold); font-family: var(--font-body); font-size: 0.9rem;
@@ -575,6 +608,19 @@
     <div id="lists-label">Vocabulary Lists</div>
     <div id="lists-container"></div>
     <button id="btn-new-list" onclick="openNewListModal()">＋ New List</button>
+    <div id="sidebar-footer">
+      <div id="sync-status" onclick="openFirebaseSetup()" title="Firebase Sync">
+        <span id="sync-dot"></span>
+        <span id="sync-label">Sync off</span>
+      </div>
+      <div class="sidebar-footer-row">
+        <button class="sidebar-footer-btn" onclick="exportAll()" title="Export all lists">⬇ Export All</button>
+        <label class="sidebar-footer-btn" title="Import lists">
+          ⬆ Import
+          <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
+        </label>
+      </div>
+    </div>
   </div>
 
   <!-- ─── Main ─── -->
@@ -681,6 +727,29 @@
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- Firebase loaded dynamically for iOS compatibility -->
+<script>
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+const FIREBASE_SDKS_LOADED = (async () => {
+  try {
+    await loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js');
+    return true;
+  } catch(e) {
+    console.warn('Firebase SDKs failed to load:', e);
+    return false;
+  }
+})();
+</script>
+
 <script>
 // ─────────────────────────────────────────
 //  IndexedDB setup
@@ -739,6 +808,219 @@ function dbDelete(store, key) {
 }
 
 // ─────────────────────────────────────────
+//  Firebase sync
+// ─────────────────────────────────────────
+let firestore = null;
+let fbUnsubscribe = [];
+
+function getFirebaseConfig() {
+  try { return JSON.parse(localStorage.getItem('lexikon_fb_config') || 'null'); }
+  catch(e) { return null; }
+}
+function saveFirebaseConfig(cfg) {
+  localStorage.setItem('lexikon_fb_config', JSON.stringify(cfg));
+}
+function isFirebaseReady() { return !!firestore; }
+
+function setSyncStatus(status) {
+  // status: 'off' | 'connecting' | 'live' | 'error'
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if (!dot) return;
+  const map = {
+    off:        { color: 'var(--muted)',  text: 'Sync off' },
+    connecting: { color: 'var(--gold)',   text: 'Connecting…' },
+    live:       { color: 'var(--green)',  text: 'Synced' },
+    error:      { color: 'var(--red)',    text: 'Sync error' },
+  };
+  const s = map[status] || map.off;
+  dot.style.background = s.color;
+  label.textContent = s.text;
+}
+
+async function initFirebase() {
+  const cfg = getFirebaseConfig();
+  if (!cfg || !cfg.apiKey || !cfg.projectId) { setSyncStatus('off'); return; }
+  setSyncStatus('connecting');
+  try {
+    const sdksLoaded = await FIREBASE_SDKS_LOADED;
+    if (!sdksLoaded) {
+      setSyncStatus('error');
+      document.getElementById('sync-label').textContent = 'Open via https://';
+      console.error('Firebase SDKs failed to load. Open the app via its GitHub Pages URL (https://), not as a local file.');
+      return;
+    }
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    firestore = firebase.firestore();
+    setupFirestoreListeners();
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    setSyncStatus('error');
+  }
+}
+
+function setupFirestoreListeners() {
+  // Unsubscribe any previous listeners
+  fbUnsubscribe.forEach(fn => fn());
+  fbUnsubscribe = [];
+
+  // ── Lists listener ──
+  const unsubLists = firestore.collection('lists').onSnapshot(snap => {
+    setSyncStatus('live');
+    snap.docChanges().forEach(change => {
+      const data = change.doc.data();
+      if (!data.id) data.id = change.doc.id;
+      if (change.type === 'added' || change.type === 'modified') {
+        dbPut('lists', data);
+        const idx = lists.findIndex(l => l.id === data.id);
+        if (idx >= 0) lists[idx] = data; else lists.push(data);
+      } else if (change.type === 'removed') {
+        dbDelete('lists', data.id);
+        lists = lists.filter(l => l.id !== data.id);
+      }
+    });
+    lists.sort((a,b) => a.name.localeCompare(b.name));
+    renderSidebar();
+  }, err => { console.error('Lists listener error:', err); setSyncStatus('error'); });
+
+  // ── Words listener ──
+  const unsubWords = firestore.collection('words').onSnapshot(snap => {
+    snap.docChanges().forEach(change => {
+      const data = change.doc.data();
+      if (!data.id) data.id = change.doc.id;
+      if (change.type === 'added' || change.type === 'modified') {
+        dbPut('words', data);
+        if (data.listId === currentListId) {
+          const idx = words.findIndex(w => w.id === data.id);
+          if (idx >= 0) words[idx] = data; else words.push(data);
+          words.sort((a,b) => a.greek.localeCompare(b.greek));
+          renderWords();
+        }
+      } else if (change.type === 'removed') {
+        dbDelete('words', data.id);
+        if (data.listId === currentListId) {
+          words = words.filter(w => w.id !== data.id);
+          renderWords();
+        }
+      }
+    });
+    renderSidebar();
+  }, err => { console.error('Words listener error:', err); setSyncStatus('error'); });
+
+  // ── Audio listener — syncs audio docs to local IndexedDB ──
+  const unsubAudio = firestore.collection('audio').onSnapshot(snap => {
+    snap.docChanges().forEach(async change => {
+      const data = change.doc.data();
+      if (change.type === 'added' || change.type === 'modified') {
+        // Convert base64 back to ArrayBuffer and cache locally
+        const existing = await dbGet('audio', data.wordId);
+        if (!existing) {
+          const arrayBuf = base64ToBuf(data.data);
+          await dbPut('audio', { wordId: data.wordId, data: arrayBuf, type: data.type });
+        }
+      } else if (change.type === 'removed') {
+        dbDelete('audio', data.wordId);
+      }
+    });
+  }, err => console.warn('Audio listener error:', err));
+
+  fbUnsubscribe.push(unsubLists, unsubWords, unsubAudio);
+}
+
+// ── Firebase write helpers ──
+async function fbPutList(list) {
+  if (!firestore) return;
+  try { await firestore.collection('lists').doc(list.id).set(list); }
+  catch(e) { console.warn('fbPutList error:', e); }
+}
+async function fbDeleteList(id) {
+  if (!firestore) return;
+  try { await firestore.collection('lists').doc(id).delete(); }
+  catch(e) { console.warn('fbDeleteList error:', e); }
+}
+async function fbPutWord(word) {
+  if (!firestore) return;
+  try { await firestore.collection('words').doc(word.id).set(word); }
+  catch(e) { console.warn('fbPutWord error:', e); }
+}
+async function fbDeleteWord(id) {
+  if (!firestore) return;
+  try { await firestore.collection('words').doc(id).delete(); }
+  catch(e) { console.warn('fbDeleteWord error:', e); }
+}
+// Audio stored in Firestore 'audio' collection as base64 (free plan, no Storage needed)
+async function fbPutAudio(wordId, arrayBuf, mimeType) {
+  if (!firestore) return;
+  try {
+    const b64 = bufToBase64(arrayBuf);
+    await firestore.collection('audio').doc(wordId).set({ wordId, type: mimeType, data: b64 });
+  } catch(e) { console.warn('fbPutAudio error:', e); }
+}
+async function fbDeleteAudio(wordId) {
+  if (!firestore) return;
+  try { await firestore.collection('audio').doc(wordId).delete(); }
+  catch(e) { console.warn('fbDeleteAudio error:', e); }
+}
+
+// ── Firebase Setup Modal ──
+function openFirebaseSetup() {
+  const cfg = getFirebaseConfig() || {};
+  showModal(`
+    <div class="modal" style="max-width:520px">
+      <h2>☁ Firebase Sync Setup</h2>
+      <p style="font-size:0.88rem;color:var(--cream-dk);margin-bottom:18px;line-height:1.6">
+        Paste your Firebase project config below to enable automatic sync between your Mac and iPhone.
+        <a href="https://console.firebase.google.com" target="_blank" style="color:var(--gold)">Open Firebase Console ↗</a>
+      </p>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:16px;font-size:0.8rem;color:var(--cream-dk);line-height:1.8">
+        <strong style="color:var(--gold-lt)">Setup steps:</strong><br>
+        1. Go to <em>console.firebase.google.com</em> → New project<br>
+        2. Add a Web app (the &lt;/&gt; icon) → copy the config values<br>
+        3. In <strong>Firestore Database</strong> → Create database → Start in test mode<br>
+        4. In Firestore → Rules tab, paste: <code style="color:var(--gold)">allow read, write: if true;</code> → Publish
+      </div>
+      <div class="form-group"><label>API Key</label>
+        <input type="text" id="fb-apiKey" value="${esc(cfg.apiKey||'')}" placeholder="AIza..."></div>
+      <div class="form-group"><label>Auth Domain</label>
+        <input type="text" id="fb-authDomain" value="${esc(cfg.authDomain||'')}" placeholder="your-project.firebaseapp.com"></div>
+      <div class="form-group"><label>Project ID</label>
+        <input type="text" id="fb-projectId" value="${esc(cfg.projectId||'')}" placeholder="your-project-id"></div>
+      <div class="form-group"><label>Messaging Sender ID</label>
+        <input type="text" id="fb-messagingSenderId" value="${esc(cfg.messagingSenderId||'')}" placeholder="123456789"></div>
+      <div class="form-group"><label>App ID</label>
+        <input type="text" id="fb-appId" value="${esc(cfg.appId||'')}" placeholder="1:123:web:abc..."></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        ${cfg.apiKey ? `<button class="btn btn-ghost" onclick="disableFirebase()" style="color:var(--red)">Disconnect</button>` : ''}
+        <button class="btn btn-gold" onclick="saveFirebaseSetup()">Save & Connect</button>
+      </div>
+    </div>
+  `);
+}
+
+function saveFirebaseSetup() {
+  const cfg = {
+    apiKey:            document.getElementById('fb-apiKey').value.trim(),
+    authDomain:        document.getElementById('fb-authDomain').value.trim(),
+    projectId:         document.getElementById('fb-projectId').value.trim(),
+    messagingSenderId: document.getElementById('fb-messagingSenderId').value.trim(),
+    appId:             document.getElementById('fb-appId').value.trim(),
+  };
+  if (!cfg.apiKey || !cfg.projectId) { toast('API Key and Project ID are required.'); return; }
+  saveFirebaseConfig(cfg);
+  closeModal();
+  toast('Config saved — reloading to connect…');
+  setTimeout(() => location.reload(), 1200);
+}
+
+function disableFirebase() {
+  localStorage.removeItem('lexikon_fb_config');
+  closeModal();
+  toast('Firebase disconnected — reloading…');
+  setTimeout(() => location.reload(), 1200);
+}
+
+// ─────────────────────────────────────────
 //  State
 // ─────────────────────────────────────────
 let lists = [];
@@ -777,6 +1059,7 @@ async function init() {
   lists = await dbGetAll('lists');
   lists.sort((a,b) => a.name.localeCompare(b.name));
   renderSidebar();
+  await initFirebase();
 }
 
 // ─────────────────────────────────────────
@@ -792,6 +1075,7 @@ function renderSidebar() {
     div.innerHTML = `
       <span class="list-item-name">${esc(l.name)}</span>
       <span class="list-item-count" id="list-count-${l.id}">—</span>
+      <button class="list-item-exp" onclick="exportList('${l.id}',event)" title="Export list">⬇</button>
       <button class="list-item-del" onclick="deleteList('${l.id}',event)" title="Delete list">✕</button>
     `;
     div.addEventListener('click', () => selectList(l.id));
@@ -943,6 +1227,7 @@ async function createList() {
   if (!name) return;
   const list = { id: uid(), name };
   await dbPut('lists', list);
+  fbPutList(list);
   lists.push(list);
   lists.sort((a,b) => a.name.localeCompare(b.name));
   closeModal();
@@ -1033,16 +1318,20 @@ async function saveWord() {
       const buf = await pendingAudioBlob.arrayBuffer();
       await dbPut('audio', { wordId: word.id, data: buf, type: pendingAudioBlob.type });
       word.hasAudio = true;
+      fbPutAudio(word.id, buf, pendingAudioBlob.type);
     }
     await dbPut('words', word);
+    fbPutWord(word);
   } else {
     const word = { id: uid(), listId: currentListId, greek, english, hasAudio: false };
     if (pendingAudioBlob) {
       const buf = await pendingAudioBlob.arrayBuffer();
       await dbPut('audio', { wordId: word.id, data: buf, type: pendingAudioBlob.type });
       word.hasAudio = true;
+      fbPutAudio(word.id, buf, pendingAudioBlob.type);
     }
     await dbPut('words', word);
+    fbPutWord(word);
     words.push(word);
     words.sort((a,b) => a.greek.localeCompare(b.greek));
   }
@@ -1054,7 +1343,13 @@ async function saveWord() {
 async function removeAudio(wordId) {
   await dbDelete('audio', wordId);
   const word = words.find(w => w.id === wordId);
-  if (word) { word.hasAudio = false; await dbPut('words', word); }
+  if (word) {
+    word.hasAudio = false;
+    delete word.audioUrl;
+    await dbPut('words', word);
+    fbPutWord(word);
+    fbDeleteAudio(wordId);
+  }
   closeModal();
   renderWords();
 }
@@ -1063,6 +1358,8 @@ async function deleteWord(id) {
   if (!confirm('Delete this word?')) return;
   await dbDelete('words', id);
   await dbDelete('audio', id);
+  fbDeleteWord(id);
+  fbDeleteAudio(id);
   words = words.filter(w => w.id !== id);
   renderSidebar();
   renderWords();
@@ -1073,11 +1370,14 @@ async function deleteList(id, e) {
   const list = lists.find(l => l.id === id);
   if (!confirm(`Delete list "${list?.name}" and all its words?`)) return;
   await dbDelete('lists', id);
+  fbDeleteList(id);
   const allWords = await dbGetAll('words');
   const toDelete = allWords.filter(w => w.listId === id);
   for (const w of toDelete) {
     await dbDelete('words', w.id);
     await dbDelete('audio', w.id);
+    fbDeleteWord(w.id);
+    fbDeleteAudio(w.id);
   }
   lists = lists.filter(l => l.id !== id);
   if (currentListId === id) {
@@ -1238,11 +1538,10 @@ async function showCurrentCard() {
 function playWordAudio(word) {
   return new Promise(async (res) => {
     if (!word.hasAudio) { res(); return; }
-    const rec = await dbGet('audio', word.id);
-    if (!rec) { res(); return; }
     try {
       const ctx = getAudioContext();
-      // decodeAudioData consumes the buffer, so slice a copy
+      const rec = await dbGet('audio', word.id);
+      if (!rec) { res(); return; }
       const arrayBuf = rec.data instanceof ArrayBuffer
         ? rec.data.slice(0)
         : await new Blob([rec.data]).arrayBuffer();
@@ -1509,7 +1808,141 @@ document.addEventListener('keydown', e => {
 init();
 
 // ─────────────────────────────────────────
-//  Sidebar drawer (mobile)
+//  Export / Import
+// ─────────────────────────────────────────
+
+// Convert ArrayBuffer → base64 string
+function bufToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+// Convert base64 string → ArrayBuffer
+function base64ToBuf(b64) {
+  const bin = atob(b64);
+  const buf = new ArrayBuffer(bin.length);
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+async function buildExportPayload(listIds) {
+  const allWords = await dbGetAll('words');
+  const payload = { version: 1, lists: [], words: [], audio: [] };
+
+  for (const id of listIds) {
+    const list = lists.find(l => l.id === id);
+    if (list) payload.lists.push(list);
+    const listWords = allWords.filter(w => w.listId === id);
+    payload.words.push(...listWords);
+    for (const w of listWords) {
+      if (w.hasAudio) {
+        const rec = await dbGet('audio', w.id);
+        if (rec) {
+          const arrayBuf = rec.data instanceof ArrayBuffer
+            ? rec.data : await new Blob([rec.data]).arrayBuffer();
+          payload.audio.push({ wordId: w.id, type: rec.type, data: bufToBase64(arrayBuf) });
+        }
+      }
+    }
+  }
+  return payload;
+}
+
+function downloadJSON(payload, filename) {
+  const json = JSON.stringify(payload);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+}
+
+async function exportAll() {
+  if (lists.length === 0) { toast('No lists to export.'); return; }
+  toast('Preparing export…');
+  const payload = await buildExportPayload(lists.map(l => l.id));
+  const date = new Date().toISOString().slice(0,10);
+  downloadJSON(payload, `lexikon-all-${date}.json`);
+  toast('Export downloaded!');
+}
+
+async function exportList(id, e) {
+  e.stopPropagation();
+  const list = lists.find(l => l.id === id);
+  if (!list) return;
+  toast('Preparing export…');
+  const payload = await buildExportPayload([id]);
+  const safe = list.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  downloadJSON(payload, `lexikon-${safe}.json`);
+  toast(`"${list.name}" exported!`);
+}
+
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  // Reset input so same file can be re-imported if needed
+  event.target.value = '';
+
+  let payload;
+  try {
+    const text = await file.text();
+    payload = JSON.parse(text);
+  } catch(e) {
+    toast('Invalid file — could not read JSON.'); return;
+  }
+
+  if (!payload.version || !Array.isArray(payload.lists) || !Array.isArray(payload.words)) {
+    toast('Invalid Lexikon export file.'); return;
+  }
+
+  const existingLists = await dbGetAll('lists');
+  const existingWords = await dbGetAll('words');
+  const existingListIds = new Set(existingLists.map(l => l.id));
+  const existingWordIds = new Set(existingWords.map(w => w.id));
+
+  let listsAdded = 0, wordsAdded = 0, audioAdded = 0;
+
+  // Import lists (skip duplicates by id, but rename if name conflicts)
+  for (const list of payload.lists) {
+    if (existingListIds.has(list.id)) continue;
+    await dbPut('lists', list);
+    lists.push(list);
+    listsAdded++;
+  }
+  lists.sort((a,b) => a.name.localeCompare(b.name));
+
+  // Import words
+  for (const word of payload.words) {
+    if (existingWordIds.has(word.id)) continue;
+    // Only import if its list was imported or already exists
+    const listExists = lists.some(l => l.id === word.listId);
+    if (!listExists) continue;
+    await dbPut('words', word);
+    wordsAdded++;
+  }
+
+  // Import audio
+  for (const rec of (payload.audio || [])) {
+    const existing = await dbGet('audio', rec.wordId);
+    if (existing) continue;
+    const arrayBuf = base64ToBuf(rec.data);
+    await dbPut('audio', { wordId: rec.wordId, data: arrayBuf, type: rec.type });
+    audioAdded++;
+  }
+
+  renderSidebar();
+  // Refresh current list view if it was affected
+  if (currentListId) await selectList(currentListId);
+
+  toast(`Import complete: ${listsAdded} list${listsAdded!==1?'s':''}, ${wordsAdded} word${wordsAdded!==1?'s':''} added.`);
+}
+
 // ─────────────────────────────────────────
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
