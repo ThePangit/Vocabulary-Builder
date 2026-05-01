@@ -1,0 +1,1946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Lexikon — NT Greek Vocabulary</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0e0c09;
+      --bg2:       #16120d;
+      --bg3:       #1e1810;
+      --border:    #3a2e1a;
+      --border2:   #5a4628;
+      --gold:      #c9923a;
+      --gold-lt:   #e8b86d;
+      --gold-dk:   #8a5f1e;
+      --cream:     #f0e6cc;
+      --cream-dk:  #c8b48a;
+      --muted:     #7a6848;
+      --red:       #c04040;
+      --green:     #5a9060;
+      --blue:      #5a6aaa;
+      --font-disp: 'Playfair Display', serif;
+      --font-body: 'Crimson Text', serif;
+      --font-greek:'SBL Greek', 'Noto Serif', serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; height: -webkit-fill-available; }
+    body {
+      height: 100%; min-height: 100vh; min-height: -webkit-fill-available;
+      background: var(--bg); color: var(--cream); font-family: var(--font-body);
+      font-size: 16px; overflow: hidden;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    body::before {
+      content:''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.6;
+    }
+
+    /* ─── Layout ─── */
+    #app { display: flex; height: 100vh; width: 100vw; }
+
+    /* ─── Sidebar ─── */
+    #sidebar {
+      width: 280px; min-width: 280px; background: var(--bg2);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #1e1608 0%, var(--bg2) 100%);
+    }
+    #sidebar-header-row { display: flex; align-items: flex-start; justify-content: space-between; }
+    #sidebar-header h1 { font-family: var(--font-disp); font-size: 1.4rem; font-weight: 700; color: var(--gold-lt); letter-spacing: 0.02em; line-height: 1.1; }
+    #sidebar-header p  { font-size: 0.75rem; color: var(--muted); margin-top: 3px; font-style: italic; }
+    #btn-sidebar-close { display: none; background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; padding: 2px 0 0 10px; line-height: 1; }
+
+    #sidebar-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+    #sidebar-scroll::-webkit-scrollbar { width: 4px; }
+    #sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ─── Book rows ─── */
+    .book-row {
+      display: flex; align-items: center; padding: 10px 12px 10px 14px;
+      cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s;
+      user-select: none;
+    }
+    .book-row:hover { background: var(--bg3); }
+    .book-row.active { border-left-color: var(--gold); background: rgba(201,146,58,0.08); }
+    .book-chevron { font-size: 0.7rem; color: var(--muted); margin-right: 8px; transition: transform 0.2s; flex-shrink: 0; }
+    .book-row.open .book-chevron { transform: rotate(90deg); }
+    .book-icon { font-size: 1rem; margin-right: 8px; flex-shrink: 0; }
+    .book-name { flex: 1; font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; color: var(--cream); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .book-row.active .book-name { color: var(--gold-lt); }
+    .book-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
+    .book-row:hover .book-actions { opacity: 1; }
+    .sb-btn { background: none; border: none; cursor: pointer; padding: 3px 5px; border-radius: 4px; font-size: 0.85rem; color: var(--muted); transition: all 0.12s; }
+    .sb-btn:hover { background: var(--bg2); }
+    .sb-btn.del:hover { color: var(--red); }
+    .sb-btn.exp:hover { color: var(--gold); }
+    .sb-btn.ren:hover { color: var(--cream); }
+    .sb-btn.play:hover { color: var(--green); }
+    .sb-btn.rev:hover { color: var(--blue); }
+
+    /* ─── Chapter rows ─── */
+    .chapters-container { display: none; }
+    .chapters-container.open { display: block; }
+    .chapter-row {
+      display: flex; align-items: center; padding: 8px 12px 8px 38px;
+      cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s;
+    }
+    .chapter-row:hover { background: var(--bg3); }
+    .chapter-row.active { border-left-color: var(--gold); background: rgba(201,146,58,0.06); }
+    .chapter-name { flex: 1; font-size: 0.9rem; color: var(--cream-dk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chapter-row.active .chapter-name { color: var(--gold-lt); }
+    .chapter-count { font-size: 0.7rem; color: var(--muted); background: var(--bg3); padding: 1px 6px; border-radius: 8px; margin-right: 5px; flex-shrink: 0; }
+    .chapter-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
+    .chapter-row:hover .chapter-actions { opacity: 1; }
+
+    /* Sidebar footer */
+    #sidebar-footer { border-top: 1px solid var(--border); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    #sync-status { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+    #sync-status:hover { border-color: var(--border2); background: var(--bg3); }
+    #sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.3s; }
+    #sync-label { font-size: 0.8rem; color: var(--muted); }
+    .footer-row { display: flex; gap: 6px; }
+    .footer-btn { flex: 1; padding: 8px 6px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--muted); font-family: var(--font-body); font-size: 0.8rem; cursor: pointer; text-align: center; transition: all 0.15s; display: block; }
+    .footer-btn:hover { color: var(--gold-lt); border-color: var(--gold); background: rgba(201,146,58,0.08); }
+
+    #btn-new-book { margin: 0 10px 6px; padding: 10px; border-radius: 6px; border: 1px dashed var(--border2); background: none; color: var(--gold); font-family: var(--font-body); font-size: 0.88rem; cursor: pointer; width: calc(100% - 20px); transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    #btn-new-book:hover { background: rgba(201,146,58,0.08); border-color: var(--gold); color: var(--gold-lt); }
+
+    /* ─── Hamburger ─── */
+    #btn-hamburger { display: none; background: none; border: none; cursor: pointer; color: var(--cream-dk); font-size: 1.4rem; padding: 6px 10px 6px 0; line-height: 1; flex-shrink: 0; }
+    #sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 49; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    #sidebar-backdrop.visible { display: block; }
+
+    /* ─── Main ─── */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #topbar {
+      padding: 14px 20px 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      background: linear-gradient(180deg, #14100a 0%, var(--bg) 100%);
+      flex-wrap: wrap;
+    }
+    #topbar-title { font-family: var(--font-disp); font-size: 1.1rem; color: var(--cream); flex: 1; min-width: 0; }
+    #topbar-title .chapter-sub { font-size: 0.8rem; color: var(--muted); display: block; font-style: italic; font-family: var(--font-body); }
+
+    .btn { padding: 7px 14px; border-radius: 5px; border: 1px solid var(--border2); font-family: var(--font-body); font-size: 0.88rem; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+    .btn-gold { background: linear-gradient(135deg, #b87e2a, #d4a040); border-color: var(--gold); color: #1a0f00; font-weight: 600; }
+    .btn-gold:hover { background: linear-gradient(135deg, #c8902e, #e4b04e); transform: translateY(-1px); }
+    .btn-ghost { background: none; color: var(--cream-dk); }
+    .btn-ghost:hover { background: var(--bg3); color: var(--cream); }
+    .btn-play { background: linear-gradient(135deg, #4a7a50, #5a9060); border-color: #5a9060; color: #fff; font-weight: 600; }
+    .btn-play:hover { background: linear-gradient(135deg, #5a8a60, #6aa070); transform: translateY(-1px); }
+    .btn-play:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-review { background: linear-gradient(135deg, #4a5a8a, #5a6aaa); border-color: #6a7aba; color: #fff; font-weight: 600; }
+    .btn-review:hover { background: linear-gradient(135deg, #5a6a9a, #6a7aba); transform: translateY(-1px); }
+    #review-due-count { background: rgba(255,255,255,0.25); border-radius: 10px; padding: 1px 7px; font-size: 0.75rem; margin-left: 2px; }
+
+    /* Topbar button groups */
+    #default-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #selection-bar { display: none; align-items: center; gap: 8px; flex-wrap: wrap; animation: fadeIn 0.15s ease; }
+    #selection-bar.visible { display: flex; }
+    #sel-count { font-size: 0.85rem; color: var(--gold-lt); font-style: italic; }
+    #btn-select-all, #btn-clear-sel { background: none; border: 1px solid var(--border2); border-radius: 5px; color: var(--cream-dk); font-family: var(--font-body); font-size: 0.82rem; padding: 6px 10px; cursor: pointer; transition: all 0.15s; }
+    #btn-select-all:hover { border-color: var(--gold); color: var(--gold-lt); }
+    #btn-clear-sel:hover { border-color: var(--red); color: var(--red); }
+
+    /* ─── Words area ─── */
+    #words-area { flex: 1; overflow-y: auto; padding: 18px 20px; }
+    #words-area::-webkit-scrollbar { width: 6px; }
+    #words-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    #no-list-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); gap: 12px; text-align: center; }
+    #no-list-state .alpha { font-family: var(--font-greek); font-size: 6rem; opacity: 0.08; line-height: 1; }
+    #no-list-state h2 { font-family: var(--font-disp); font-size: 1.4rem; color: var(--cream-dk); }
+    #no-list-state p { font-size: 1rem; max-width: 280px; line-height: 1.6; }
+    #empty-state { display: none; flex-direction: column; align-items: center; justify-content: center; height: 60%; color: var(--muted); gap: 10px; }
+    #empty-state .big-icon { font-size: 3rem; opacity: 0.3; }
+    #words-grid { display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+    .word-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; transition: border-color 0.15s, transform 0.15s; position: relative; overflow: hidden; cursor: pointer; }
+    .word-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold-dk), transparent); opacity: 0; transition: opacity 0.2s; }
+    .word-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+    .word-card:hover::before { opacity: 1; }
+    .word-card.selected { border-color: var(--gold); background: rgba(201,146,58,0.1); }
+    .word-card.selected::before { opacity: 1; }
+    .word-check { position: absolute; top: 12px; right: 12px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border2); background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: transparent; transition: all 0.15s; }
+    .word-card.selected .word-check { background: var(--gold); border-color: var(--gold); color: #1a0f00; }
+    .word-greek { font-family: var(--font-greek); font-size: 1.5rem; color: var(--gold-lt); letter-spacing: 0.02em; margin-bottom: 6px; line-height: 1.3; padding-right: 28px; }
+    .word-english { font-size: 1rem; color: var(--cream-dk); font-style: italic; line-height: 1.4; }
+    .word-phonetic { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+    .word-footer { display: flex; align-items: center; margin-top: 12px; gap: 6px; flex-wrap: wrap; }
+    .word-audio-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; display: flex; align-items: center; gap: 4px; }
+    .word-audio-badge.has-audio { background: rgba(90,144,96,0.2); border: 1px solid rgba(90,144,96,0.4); color: #7ab880; }
+    .word-audio-badge.no-audio { background: rgba(90,70,40,0.3); border: 1px solid var(--border); color: var(--muted); }
+    .sr-badge { font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; display: flex; align-items: center; gap: 3px; }
+    .sr-badge.new      { background: rgba(90,100,160,0.2); border: 1px solid rgba(90,100,160,0.4); color: #8a9ada; }
+    .sr-badge.due      { background: rgba(180,80,80,0.2);  border: 1px solid rgba(180,80,80,0.4);  color: #e07070; }
+    .sr-badge.learning { background: rgba(180,140,40,0.2); border: 1px solid rgba(180,140,40,0.4); color: #c8a040; }
+    .sr-badge.review   { background: rgba(60,120,80,0.2);  border: 1px solid rgba(60,120,80,0.4);  color: #60b070; }
+    .word-actions { margin-left: auto; display: flex; gap: 4px; }
+    .word-actions button { background: none; border: none; cursor: pointer; padding: 4px 7px; border-radius: 4px; font-size: 0.85rem; transition: background 0.12s; color: var(--muted); }
+    .word-actions button:hover { background: var(--bg3); color: var(--cream); }
+    .word-actions button.del:hover { color: var(--red); }
+
+    /* ─── Modals ─── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 10px; padding: 26px 28px; min-width: 340px; max-width: 480px; width: 90%; animation: slideUp 0.2s ease; max-height: 90vh; overflow-y: auto; }
+    @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal h2 { font-family: var(--font-disp); font-size: 1.25rem; color: var(--gold-lt); margin-bottom: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: 5px; color: var(--cream); padding: 8px 11px; font-family: var(--font-body); font-size: 1rem; outline: none; transition: border-color 0.15s; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+    .form-group .greek-input { font-family: var(--font-greek); font-size: 1.2rem; color: var(--gold-lt); }
+    .form-group input[type="file"] { padding: 5px 11px; font-size: 0.85rem; cursor: pointer; }
+    .audio-preview { margin-top: 7px; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--green); }
+    .audio-preview button { background: none; border: none; cursor: pointer; color: var(--gold); font-size: 1rem; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+
+    /* TTS toggle */
+    .tts-toggle-row { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 10px; font-size: 0.88rem; color: var(--cream-dk); }
+    .tts-toggle-row input { display: none; }
+    .tts-switch { width: 36px; height: 20px; border-radius: 10px; background: var(--border2); position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .tts-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform 0.2s, background 0.2s; }
+    .tts-toggle-row input:checked ~ .tts-switch { background: rgba(201,146,58,0.35); }
+    .tts-toggle-row input:checked ~ .tts-switch::after { transform: translateX(16px); background: var(--gold); }
+    #tts-voice-select { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: 5px; color: var(--cream); padding: 6px 10px; font-family: var(--font-body); font-size: 0.88rem; outline: none; cursor: pointer; margin-top: 2px; }
+
+    /* ─── Player overlay ─── */
+    #player-overlay { position: fixed; inset: 0; background: rgba(5,3,1,0.96); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+    #player-overlay.hidden { display: none; }
+    #btn-close-player { position: absolute; left: 30px; top: 30px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 7px 14px; cursor: pointer; font-family: var(--font-body); font-size: 0.88rem; transition: all 0.15s; }
+    #btn-close-player:hover { color: var(--cream); border-color: var(--border2); }
+    #player-settings { position: absolute; right: 30px; top: 30px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; min-width: 200px; }
+    .setting-section { margin-bottom: 16px; }
+    .setting-section:last-child { margin-bottom: 0; }
+    .setting-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 8px; }
+    .mode-btn { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 5px; background: none; border: 1px solid transparent; cursor: pointer; margin-bottom: 3px; font-family: var(--font-body); font-size: 0.88rem; color: var(--cream-dk); transition: all 0.12s; }
+    .mode-btn:hover { background: var(--bg3); color: var(--cream); }
+    .mode-btn.active { background: rgba(201,146,58,0.15); border-color: rgba(201,146,58,0.4); color: var(--gold-lt); }
+    #speed-slider { width: 100%; accent-color: var(--gold); cursor: pointer; height: 4px; }
+    #speed-val { font-size: 0.82rem; color: var(--gold); text-align: center; margin-top: 6px; }
+    #tts-rate-wrap { margin-top: 8px; }
+
+    #player-card { width: min(520px, 90vw); text-align: center; }
+    #player-list-name { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 24px; }
+    #card-container { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 44px 36px; position: relative; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    #card-container::before { content: ''; position: absolute; inset: 0; border-radius: 14px; background: radial-gradient(ellipse at 50% 0%, rgba(201,146,58,0.07) 0%, transparent 70%); pointer-events: none; }
+    #audio-indicator { position: absolute; top: 14px; right: 16px; font-size: 1.1rem; color: var(--gold); opacity: 0; transition: opacity 0.2s; }
+    #audio-indicator.playing { opacity: 1; animation: pulse 0.8s infinite; }
+    @keyframes pulse { 0%,100%{ opacity: 1; } 50%{ opacity: 0.4; } }
+    #card-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 16px; }
+    #card-primary { font-family: var(--font-greek); font-size: 2.8rem; color: var(--gold-lt); line-height: 1.2; margin-bottom: 8px; min-height: 60px; }
+    #card-primary.eng { font-family: var(--font-disp); font-size: 2rem; font-style: italic; color: var(--cream); }
+    #card-secondary { font-family: var(--font-disp); font-size: 1.4rem; color: var(--cream-dk); font-style: italic; margin-top: 12px; min-height: 36px; opacity: 0; transition: opacity 0.3s; }
+    #card-secondary.visible { opacity: 1; }
+    #card-secondary.greek-sec { font-family: var(--font-greek); font-size: 1.6rem; color: var(--gold); font-style: normal; }
+    #progress-bar-wrap { margin: 22px 0 6px; }
+    #progress-bar-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    #progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dk), var(--gold)); border-radius: 2px; transition: width 0.3s ease; }
+    #progress-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.77rem; color: var(--muted); }
+    #timer-container { margin: 14px 0; }
+    #timer-bar-track { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+    #timer-bar-fill { height: 100%; background: var(--gold-dk); border-radius: 1px; transition: width 0.1s linear; }
+    #player-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px; }
+    .ctrl-btn { background: var(--bg2); border: 1px solid var(--border2); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; color: var(--cream-dk); transition: all 0.15s; }
+    .ctrl-btn:hover { border-color: var(--gold); color: var(--gold-lt); background: var(--bg3); }
+    .ctrl-btn.primary { width: 60px; height: 60px; font-size: 1.5rem; background: linear-gradient(135deg, #4a7a50, #5a9060); border-color: #6aa070; color: #fff; }
+    .ctrl-btn.primary:hover { background: linear-gradient(135deg, #5a8a60, #6aa070); transform: scale(1.05); }
+    .ctrl-btn.shuffled { border-color: var(--gold); color: var(--gold); }
+
+    /* ─── Review overlay ─── */
+    #review-overlay { position: fixed; inset: 0; background: rgba(5,3,1,0.96); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+    #review-overlay.hidden { display: none; }
+    #btn-close-review { position: absolute; left: 30px; top: 30px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 7px 14px; cursor: pointer; font-family: var(--font-body); font-size: 0.88rem; transition: all 0.15s; }
+    #btn-close-review:hover { color: var(--cream); border-color: var(--border2); }
+    #review-card { width: min(520px, 90vw); text-align: center; }
+    #review-list-name { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 24px; }
+    #review-container { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 44px 36px; position: relative; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    #review-container::before { content: ''; position: absolute; inset: 0; border-radius: 14px; background: radial-gradient(ellipse at 50% 0%, rgba(90,100,160,0.07) 0%, transparent 70%); pointer-events: none; }
+    #review-audio-indicator { position: absolute; top: 14px; right: 16px; font-size: 1.1rem; color: var(--gold); opacity: 0; transition: opacity 0.2s; }
+    #review-audio-indicator.playing { opacity: 1; animation: pulse 0.8s infinite; }
+    #review-card-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 16px; }
+    #review-card-greek { font-family: var(--font-greek); font-size: 2.8rem; color: var(--gold-lt); line-height: 1.2; margin-bottom: 8px; }
+    #review-card-english { font-family: var(--font-disp); font-size: 1.5rem; color: var(--cream-dk); font-style: italic; margin-top: 16px; }
+    #review-card-english.hidden { display: none; }
+    #review-progress-wrap { margin: 22px 0 6px; }
+    #review-progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    #review-progress-fill { height: 100%; background: linear-gradient(90deg, #4a5a8a, #6a7aba); border-radius: 2px; transition: width 0.3s ease; }
+    #review-progress-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.77rem; color: var(--muted); }
+    #review-actions { margin-top: 22px; }
+    .review-reveal-btn { width: 100%; padding: 14px; border-radius: 8px; background: linear-gradient(135deg, #4a5a8a, #5a6aaa); border: 1px solid #6a7aba; color: #fff; font-family: var(--font-body); font-size: 1.1rem; cursor: pointer; transition: all 0.15s; }
+    .review-reveal-btn:hover { background: linear-gradient(135deg, #5a6a9a, #6a7aba); }
+    #review-rating-btns { display: flex; gap: 8px; }
+    #review-rating-btns.hidden { display: none; }
+    .rating-btn { flex: 1; padding: 12px 6px; border-radius: 8px; border: 1px solid var(--border2); font-family: var(--font-body); font-size: 0.95rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; color: #fff; font-weight: 600; }
+    .rating-btn span { font-size: 0.7rem; font-weight: 400; opacity: 0.8; }
+    .rating-btn.again { background: #7a2020; border-color: #a03030; }
+    .rating-btn.again:hover { background: #8a3030; }
+    .rating-btn.hard  { background: #7a5a10; border-color: #a07020; }
+    .rating-btn.hard:hover  { background: #8a6a20; }
+    .rating-btn.good  { background: #2a5a3a; border-color: #3a7a4a; }
+    .rating-btn.good:hover  { background: #3a6a4a; }
+    .rating-btn.easy  { background: #1a4a6a; border-color: #2a6a8a; }
+    .rating-btn.easy:hover  { background: #2a5a7a; }
+
+    /* ─── Toast ─── */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg2); border: 1px solid var(--border2); color: var(--cream); padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; z-index: 999; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
+    #toast.show { opacity: 1; }
+
+    /* ─── Mobile ─── */
+    @media (max-width: 680px) {
+      #sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; width: 300px; min-width: unset; transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); padding-top: env(safe-area-inset-top); }
+      #sidebar.open { transform: translateX(0); }
+      #btn-hamburger { display: block; }
+      #btn-sidebar-close { display: block !important; }
+      .book-row, .chapter-row { padding-top: 12px; padding-bottom: 12px; }
+      .book-actions, .chapter-actions { opacity: 1; }
+      #topbar { padding: 10px 12px 8px; gap: 6px; }
+      #topbar-title { font-size: 0.95rem; }
+      .btn { padding: 6px 10px; font-size: 0.82rem; }
+      #words-grid { grid-template-columns: 1fr; }
+      #words-area { padding: 12px 12px; }
+      #player-overlay, #review-overlay { flex-direction: column; justify-content: flex-start; padding: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+      #btn-close-player, #btn-close-review { position: static; width: 100%; border-radius: 0; border-left: none; border-right: none; border-top: none; padding: 14px 20px; text-align: left; }
+      #player-card, #review-card { width: 100%; padding: 16px 14px 8px; }
+      #card-container, #review-container { padding: 28px 18px; min-height: 170px; border-radius: 10px; }
+      #card-primary { font-size: 2.2rem; }
+      #card-primary.eng { font-size: 1.6rem; }
+      #card-secondary { font-size: 1.2rem; }
+      #review-card-greek { font-size: 2.2rem; }
+      #review-card-english { font-size: 1.2rem; }
+      #player-controls { gap: 10px; }
+      .ctrl-btn { width: 52px; height: 52px; }
+      .ctrl-btn.primary { width: 62px; height: 62px; }
+      #player-settings { position: static; width: 100%; border-radius: 0; border-left: none; border-right: none; border-bottom: none; border-top: 1px solid var(--border); padding: 16px 14px calc(16px + env(safe-area-inset-bottom)); }
+      .mode-btn { padding: 11px 12px; font-size: 0.92rem; }
+      .modal { width: 95%; min-width: unset; max-width: unset; padding: 20px 16px; }
+      #review-rating-btns { gap: 6px; }
+      .rating-btn { padding: 12px 4px; font-size: 0.88rem; }
+    }
+    @media (max-width: 380px) {
+      #card-primary { font-size: 1.9rem; }
+      .ctrl-btn { width: 46px; height: 46px; }
+      .ctrl-btn.primary { width: 56px; height: 56px; }
+    }
+  </style>
+</head>
+<body>
+<div id="sidebar-backdrop" onclick="closeSidebar()"></div>
+<div id="app">
+  <!-- ─── Sidebar ─── -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div id="sidebar-header-row">
+        <div>
+          <h1>Λεξικόν</h1>
+          <p>New Testament Greek Vocabulary</p>
+        </div>
+        <button id="btn-sidebar-close" onclick="closeSidebar()">✕</button>
+      </div>
+    </div>
+    <div id="sidebar-scroll"></div>
+    <button id="btn-new-book" onclick="openNewBookModal()">＋ New Book</button>
+    <div id="sidebar-footer">
+      <div id="sync-status" onclick="openFirebaseSetup()">
+        <span id="sync-dot"></span>
+        <span id="sync-label">Sync off</span>
+      </div>
+      <div class="footer-row">
+        <button class="footer-btn" onclick="exportAll()">⬇ Export All</button>
+        <label class="footer-btn">⬆ Import<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)"></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Main ─── -->
+  <div id="main">
+    <div id="topbar">
+      <button id="btn-hamburger" onclick="toggleSidebar()">☰</button>
+      <div id="topbar-title">
+        <span id="current-title">Select a book</span>
+        <span id="current-subtitle" class="chapter-sub" style="display:none"></span>
+      </div>
+      <div id="default-bar">
+        <button class="btn btn-ghost" id="btn-tts-toggle" onclick="topbarTtsToggle()" style="display:none;font-size:1.1rem;padding:6px 9px;">🔇</button>
+        <button class="btn btn-ghost" id="btn-add-word" onclick="openAddWordModal()" style="display:none">＋ Word</button>
+        <button class="btn btn-review" id="btn-review" onclick="openReview()" style="display:none">📚 Review <span id="review-due-count"></span></button>
+        <button class="btn btn-play" id="btn-play" onclick="openPlayer()" disabled>▶ Play</button>
+      </div>
+      <div id="selection-bar">
+        <span id="sel-count"></span>
+        <button id="btn-select-all" onclick="selectAllWords()">Select All</button>
+        <button id="btn-clear-sel" onclick="clearSelection()">✕ Clear</button>
+        <button class="btn btn-gold" onclick="openPlayerWithSelection()">▶ Play Selected</button>
+      </div>
+    </div>
+    <div id="words-area">
+      <div id="no-list-state">
+        <div class="alpha">Αα</div>
+        <h2>Welcome to Lexikon</h2>
+        <p>Add a book from the sidebar, then add chapters with vocabulary words.</p>
+      </div>
+      <div id="empty-state">
+        <div class="big-icon">📜</div>
+        <p>No words yet. Add your first vocabulary word.</p>
+      </div>
+      <div id="words-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Player Overlay ─── -->
+<div id="player-overlay" class="hidden">
+  <button id="btn-close-player" onclick="closePlayer()">✕ Close</button>
+  <div id="player-card">
+    <div id="player-list-name"></div>
+    <div id="card-container">
+      <div id="audio-indicator">♪</div>
+      <div id="card-label">Greek</div>
+      <div id="card-primary"></div>
+      <div id="card-secondary"></div>
+    </div>
+    <div id="progress-bar-wrap">
+      <div id="progress-bar-track"><div id="progress-bar-fill" style="width:0%"></div></div>
+      <div id="progress-info">
+        <span id="progress-text">0 / 0</span>
+        <span id="progress-pct">0%</span>
+      </div>
+    </div>
+    <div id="timer-container">
+      <div id="timer-bar-track"><div id="timer-bar-fill" style="width:0%"></div></div>
+    </div>
+    <div id="player-controls">
+      <button class="ctrl-btn" onclick="playerPrev()">◀◀</button>
+      <button class="ctrl-btn primary" id="btn-playpause" onclick="togglePlayPause()">⏸</button>
+      <button class="ctrl-btn" onclick="playerNext()">▶▶</button>
+      <button class="ctrl-btn" id="btn-shuffle" onclick="toggleShuffle()">⇄</button>
+    </div>
+  </div>
+  <div id="player-settings">
+    <div class="setting-section">
+      <div class="setting-label">Playback Mode</div>
+      <button class="mode-btn active" id="mode-0" onclick="setMode(0)">🔤→🔠 Greek then English</button>
+      <button class="mode-btn" id="mode-1" onclick="setMode(1)">🔠→🔤 English then Greek</button>
+      <button class="mode-btn" id="mode-2" onclick="setMode(2)">🔠 English only</button>
+      <button class="mode-btn" id="mode-3" onclick="setMode(3)">🔤 Greek only</button>
+    </div>
+    <div class="setting-section">
+      <div class="setting-label">Pause between words</div>
+      <input type="range" id="speed-slider" min="1" max="10" value="3" oninput="updateSpeed(this.value)">
+      <div id="speed-val">3 seconds</div>
+    </div>
+    <div class="setting-section">
+      <div class="setting-label">English Voice (TTS)</div>
+      <label class="tts-toggle-row">
+        <span>Speak English aloud</span>
+        <input type="checkbox" id="tts-enabled" onchange="ttsToggled()">
+        <span class="tts-switch"></span>
+      </label>
+      <select id="tts-voice-select" style="display:none" onchange="ttsVoiceChanged()"></select>
+      <div id="tts-rate-wrap" style="display:none">
+        <div style="display:flex;justify-content:space-between;margin-top:8px">
+          <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Rate</span>
+          <span id="tts-rate-val" style="font-size:0.82rem;color:var(--gold)">1.0×</span>
+        </div>
+        <input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1" style="width:100%;accent-color:var(--gold);cursor:pointer;height:4px;margin-top:4px" oninput="ttsRateChanged(this.value)">
+        <div style="display:flex;justify-content:space-between;margin-top:10px">
+          <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Volume</span>
+          <span id="tts-vol-val" style="font-size:0.82rem;color:var(--gold)">100%</span>
+        </div>
+        <input type="range" id="tts-vol" min="0" max="1" step="0.05" value="1" style="width:100%;accent-color:var(--gold);cursor:pointer;height:4px;margin-top:4px" oninput="ttsVolChanged(this.value)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Review Overlay ─── -->
+<div id="review-overlay" class="hidden">
+  <button id="btn-close-review" onclick="closeReview()">✕ Close</button>
+  <div id="review-card">
+    <div id="review-list-name"></div>
+    <div id="review-container">
+      <div id="review-audio-indicator">♪</div>
+      <div id="review-card-label">Greek</div>
+      <div id="review-card-greek"></div>
+      <div id="review-card-english" class="hidden"></div>
+    </div>
+    <div id="review-progress-wrap">
+      <div id="review-progress-track"><div id="review-progress-fill" style="width:0%"></div></div>
+      <div id="review-progress-info">
+        <span id="review-progress-text">0 / 0</span>
+        <span id="review-session-label">Today's review</span>
+      </div>
+    </div>
+    <div id="review-actions">
+      <button class="review-reveal-btn" id="btn-reveal" onclick="revealAnswer()">Reveal Answer</button>
+      <div id="review-rating-btns" class="hidden">
+        <button class="rating-btn again" onclick="rateWord(0)">Again<span>&lt;1d</span></button>
+        <button class="rating-btn hard"  onclick="rateWord(3)">Hard<span id="lbl-hard"></span></button>
+        <button class="rating-btn good"  onclick="rateWord(4)">Good<span id="lbl-good"></span></button>
+        <button class="rating-btn easy"  onclick="rateWord(5)">Easy<span id="lbl-easy"></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+<div id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────
+//  Firebase config (embedded)
+// ─────────────────────────────────────────
+const EMBEDDED_FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyDzEWDWlV9D_6QRkeLid4xgBlWdiy-4_8U",
+  authDomain:        "greek-vocabulary-builder.firebaseapp.com",
+  projectId:         "greek-vocabulary-builder",
+  messagingSenderId: "582431713543",
+  appId:             "1:582431713543:web:f86756ed7e09629f12bda2"
+};
+
+// ─────────────────────────────────────────
+//  IndexedDB
+// ─────────────────────────────────────────
+let db;
+const DB_NAME = 'LexikonDB', DB_VER = 3;
+
+function initDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      ['books','chapters','words','audio','sr_data'].forEach(store => {
+        if (!d.objectStoreNames.contains(store)) {
+          const key = (store === 'audio') ? 'wordId' : (store === 'sr_data') ? 'wordId' : 'id';
+          d.createObjectStore(store, { keyPath: key });
+        }
+      });
+    };
+    req.onsuccess = e => { db = e.target.result; res(); };
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbGet(store, key) {
+  return new Promise((res, rej) => { const tx = db.transaction(store,'readonly'); const r = tx.objectStore(store).get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+function dbGetAll(store) {
+  return new Promise((res, rej) => { const tx = db.transaction(store,'readonly'); const r = tx.objectStore(store).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+function dbPut(store, val) {
+  return new Promise((res, rej) => { const tx = db.transaction(store,'readwrite'); const r = tx.objectStore(store).put(val); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+function dbDelete(store, key) {
+  return new Promise((res, rej) => { const tx = db.transaction(store,'readwrite'); const r = tx.objectStore(store).delete(key); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+}
+
+// ─────────────────────────────────────────
+//  Firebase
+// ─────────────────────────────────────────
+let firestore = null;
+let fbUnsubscribe = [];
+
+function getFirebaseConfig() {
+  try { const s = JSON.parse(localStorage.getItem('lexikon_fb_config')||'null'); if (s&&s.apiKey) return s; } catch(e) {}
+  return EMBEDDED_FIREBASE_CONFIG;
+}
+function saveFirebaseConfig(cfg) { localStorage.setItem('lexikon_fb_config', JSON.stringify(cfg)); }
+
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot'), lbl = document.getElementById('sync-label');
+  if (!dot) return;
+  const m = { off:{color:'var(--muted)',text:'Sync off'}, connecting:{color:'var(--gold)',text:'Connecting…'}, live:{color:'var(--green)',text:'Synced'}, error:{color:'var(--red)',text:'Sync error'} };
+  const v = m[s]||m.off; dot.style.background = v.color; lbl.textContent = v.text;
+}
+
+async function initFirebase() {
+  const cfg = getFirebaseConfig();
+  if (!cfg||!cfg.apiKey||!cfg.projectId) { setSyncStatus('off'); return; }
+  if (typeof firebase === 'undefined') { setSyncStatus('error'); return; }
+  setSyncStatus('connecting');
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    firestore = firebase.firestore();
+    setupFirestoreListeners();
+    setupSRListener();
+    // After a short delay, repair any words that couldn't be matched before Firebase connected
+    setTimeout(repairWordTags, 3000);
+  } catch(e) { console.error('Firebase init error:', e); setSyncStatus('error'); }
+}
+
+function setupFirestoreListeners() {
+  fbUnsubscribe.forEach(fn => fn());
+  fbUnsubscribe = [];
+
+  // Books
+  fbUnsubscribe.push(firestore.collection('books').onSnapshot(snap => {
+    setSyncStatus('live');
+    snap.docChanges().forEach(ch => {
+      const d = ch.doc.data(); if (!d.id) d.id = ch.doc.id;
+      if (ch.type==='added'||ch.type==='modified') { dbPut('books',d); const i=books.findIndex(b=>b.id===d.id); if(i>=0)books[i]=d; else books.push(d); }
+      else if (ch.type==='removed') { dbDelete('books',d.id); books=books.filter(b=>b.id!==d.id); }
+    });
+    books.sort((a,b)=>a.name.localeCompare(b.name));
+    renderSidebar();
+  }, err => setSyncStatus('error')));
+
+  // Chapters
+  fbUnsubscribe.push(firestore.collection('chapters').onSnapshot(snap => {
+    snap.docChanges().forEach(ch => {
+      const d = ch.doc.data(); if (!d.id) d.id = ch.doc.id;
+      if (ch.type==='added'||ch.type==='modified') { dbPut('chapters',d); const i=chapters.findIndex(c=>c.id===d.id); if(i>=0)chapters[i]=d; else chapters.push(d); }
+      else if (ch.type==='removed') { dbDelete('chapters',d.id); chapters=chapters.filter(c=>c.id!==d.id); }
+    });
+    renderSidebar();
+    if (currentChapterId) updateTopbar();
+  }, err => console.warn('chapters listener error',err)));
+
+  // Words
+  fbUnsubscribe.push(firestore.collection('words').onSnapshot(snap => {
+    snap.docChanges().forEach(ch => {
+      const d = ch.doc.data(); if (!d.id) d.id = ch.doc.id;
+      if (ch.type==='added'||ch.type==='modified') {
+        dbPut('words',d);
+        if (d.chapterId===currentChapterId) { const i=currentWords.findIndex(w=>w.id===d.id); if(i>=0)currentWords[i]=d; else currentWords.push(d); currentWords.sort((a,b)=>a.greek.localeCompare(b.greek)); renderWords(); }
+      } else if (ch.type==='removed') {
+        dbDelete('words',d.id);
+        if (d.chapterId===currentChapterId) { currentWords=currentWords.filter(w=>w.id!==d.id); renderWords(); }
+      }
+    });
+    renderSidebar();
+    updateReviewBadge();
+  }, err => console.warn('words listener error',err)));
+
+  // Audio
+  fbUnsubscribe.push(firestore.collection('audio').onSnapshot(snap => {
+    snap.docChanges().forEach(async ch => {
+      const d = ch.doc.data();
+      if (ch.type==='added'||ch.type==='modified') {
+        const ab = base64ToBuf(d.data);
+        await dbPut('audio',{wordId:d.wordId,data:ab,type:d.type});
+      } else if (ch.type==='removed') { dbDelete('audio',d.wordId); }
+    });
+  }, err => console.warn('audio listener error',err)));
+}
+
+// Firebase write helpers
+async function fbPut(collection, data) { if (!firestore) return; try { await firestore.collection(collection).doc(data.id||data.wordId).set(data); } catch(e) { console.warn('fbPut error',e); } }
+async function fbDel(collection, id)   { if (!firestore) return; try { await firestore.collection(collection).doc(id).delete(); } catch(e) { console.warn('fbDel error',e); } }
+async function fbPutAudio(wordId, buf, type) {
+  if (!firestore) return;
+  try { await firestore.collection('audio').doc(wordId).set({wordId,type,data:bufToBase64(buf)}); }
+  catch(e) { console.warn('fbPutAudio error',e); }
+}
+
+// ─────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────
+let books        = [];
+let chapters     = [];
+let currentBookId    = null;
+let currentChapterId = null;
+let currentWords     = [];
+let selectedWordIds  = new Set();
+let editingWordId    = null;
+let pendingAudioBlob = null;
+
+// ─────────────────────────────────────────
+//  Init & Migration
+// ─────────────────────────────────────────
+async function init() {
+  await initDB();
+  await loadSRData();
+  books    = await dbGetAll('books');
+  chapters = await dbGetAll('chapters');
+  books.sort((a,b) => a.name.localeCompare(b.name));
+  await migrateOldLists();
+  renderSidebar();
+  await initFirebase();
+}
+
+// Migrate old "lists" store → books + chapters
+async function migrateOldLists() {
+  // Step 1: If the old 'lists' store exists, migrate list→chapter structure
+  if (db.objectStoreNames.contains('lists') && books.length === 0) {
+    let oldLists;
+    try { oldLists = await dbGetAll('lists'); } catch(e) { oldLists = []; }
+    if (oldLists && oldLists.length > 0) {
+      const bookMap = {};
+      for (const list of oldLists) {
+        const m = list.name.match(/^(.+?)\s+(\d+)$/);
+        const bookName = m ? m[1] : 'Imported Lists';
+        const chNum    = m ? parseInt(m[2]) : 999;
+        if (!bookMap[bookName]) bookMap[bookName] = [];
+        bookMap[bookName].push({ list, chNum });
+      }
+      for (const [bookName, entries] of Object.entries(bookMap)) {
+        const book = { id: uid(), name: bookName };
+        await dbPut('books', book);
+        books.push(book);
+        entries.sort((a,b) => a.chNum - b.chNum);
+        for (let i = 0; i < entries.length; i++) {
+          const { list } = entries[i];
+          const chapter = { id: uid(), bookId: book.id, name: `Chapter ${i+1}`, order: i, _oldListId: list.id };
+          await dbPut('chapters', chapter);
+          chapters.push(chapter);
+        }
+      }
+      books.sort((a,b) => a.name.localeCompare(b.name));
+    }
+  }
+
+  // Step 2: Re-tag any words that still have listId but no chapterId
+  // This handles the case where books/chapters already exist (e.g. from Firebase)
+  // but words were never re-tagged locally
+  await repairWordTags();
+}
+
+// Find all words with listId, match to chapters via _oldListId, re-tag them
+async function repairWordTags() {
+  const allWords = await dbGetAll('words');
+  const untagged = allWords.filter(w => w.listId && !w.chapterId);
+  if (untagged.length === 0) return;
+
+  // Build a map of oldListId → chapter
+  // Chapters store _oldListId if migrated locally, otherwise try to match by name
+  const allChapters = await dbGetAll('chapters');
+  const listToChapter = {};
+  allChapters.forEach(ch => { if (ch._oldListId) listToChapter[ch._oldListId] = ch; });
+
+  // Also try matching via Firestore if connected
+  let fixed = 0;
+  for (const w of untagged) {
+    const ch = listToChapter[w.listId];
+    if (ch) {
+      w.chapterId = ch.id;
+      w.bookId    = ch.bookId;
+      delete w.listId;
+      await dbPut('words', w);
+      if (firestore) fbPut('words', w);
+      fixed++;
+    }
+  }
+
+  if (fixed > 0) {
+    toast(`Repaired ${fixed} word${fixed!==1?'s':''} — reloading…`);
+    setTimeout(() => location.reload(), 1500);
+  } else if (untagged.length > 0) {
+    // Words exist with listId but we couldn't match them — store the mapping for manual repair
+    console.warn(`${untagged.length} words have listId but no matching chapter found.`);
+    // Show repair button in UI
+    showRepairButton(untagged.length);
+  }
+}
+
+function showRepairButton(count) {
+  const footer = document.getElementById('sidebar-footer');
+  if (!footer || document.getElementById('btn-repair')) return;
+  const btn = document.createElement('button');
+  btn.id = 'btn-repair';
+  btn.className = 'footer-btn';
+  btn.style.cssText = 'color:var(--gold);border-color:var(--gold-dk);';
+  btn.textContent = `⚠ Repair ${count} words`;
+  btn.onclick = openRepairModal;
+  footer.insertBefore(btn, footer.firstChild);
+}
+
+async function openRepairModal() {
+  const allWords = await dbGetAll('words');
+  const untagged = allWords.filter(w => w.listId && !w.chapterId);
+  const uniqueListIds = [...new Set(untagged.map(w => w.listId))];
+  const allChapters = await dbGetAll('chapters');
+
+  let rows = uniqueListIds.map((lid, i) => {
+    const count = untagged.filter(w => w.listId === lid).length;
+    const chOptions = allChapters.map(ch => {
+      const book = books.find(b => b.id === ch.bookId);
+      return `<option value="${ch.id}">${book?.name||''} · ${ch.name}</option>`;
+    }).join('');
+    return `<div class="form-group">
+      <label>${count} word${count!==1?'s':''} from old list ID: …${lid.slice(-6)}</label>
+      <select id="repair-sel-${i}" data-listid="${lid}">
+        <option value="">— assign to chapter —</option>${chOptions}
+      </select>
+    </div>`;
+  }).join('');
+
+  showModal(`<div class="modal">
+    <h2>⚠ Repair Word Assignment</h2>
+    <p style="font-size:0.85rem;color:var(--cream-dk);margin-bottom:14px;line-height:1.5">
+      Some words couldn't be automatically matched to chapters. Please assign each group to the correct chapter.
+    </p>
+    ${rows}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="applyRepair(${uniqueListIds.length})">Apply</button>
+    </div></div>`);
+}
+
+async function applyRepair(count) {
+  const allWords = await dbGetAll('words');
+  let fixed = 0;
+  for (let i = 0; i < count; i++) {
+    const sel = document.getElementById(`repair-sel-${i}`);
+    if (!sel || !sel.value) continue;
+    const listId = sel.dataset.listid;
+    const chapterId = sel.value;
+    const ch = chapters.find(c => c.id === chapterId);
+    if (!ch) continue;
+    for (const w of allWords.filter(w => w.listId === listId)) {
+      w.chapterId = chapterId; w.bookId = ch.bookId; delete w.listId;
+      await dbPut('words', w); if (firestore) fbPut('words', w); fixed++;
+    }
+  }
+  closeModal();
+  toast(`Repaired ${fixed} word${fixed!==1?'s':''} — reloading…`);
+  setTimeout(() => location.reload(), 1500);
+}
+
+// ─────────────────────────────────────────
+//  Sidebar rendering
+// ─────────────────────────────────────────
+function renderSidebar() {
+  const c = document.getElementById('sidebar-scroll');
+  c.innerHTML = '';
+  books.forEach(book => {
+    const bookChapters = chapters.filter(ch => ch.bookId === book.id)
+                                 .sort((a,b) => a.order - b.order);
+    const isOpen   = book.id === currentBookId;
+    const isActive = book.id === currentBookId && !currentChapterId;
+
+    const bookDiv = document.createElement('div');
+    bookDiv.className = 'book-row' + (isOpen ? ' open' : '') + (isActive ? ' active' : '');
+    bookDiv.innerHTML = `
+      <span class="book-chevron">▶</span>
+      <span class="book-icon">📖</span>
+      <span class="book-name">${esc(book.name)}</span>
+      <div class="book-actions">
+        <button class="sb-btn play" onclick="playBook('${book.id}',event)" title="Play book">▶</button>
+        <button class="sb-btn rev"  onclick="reviewBook('${book.id}',event)" title="Review book">📚</button>
+        <button class="sb-btn exp"  onclick="exportBook('${book.id}',event)" title="Export">⬇</button>
+        <button class="sb-btn ren"  onclick="openRenameBookModal('${book.id}',event)" title="Rename">✎</button>
+        <button class="sb-btn del"  onclick="deleteBook('${book.id}',event)" title="Delete">✕</button>
+      </div>
+    `;
+    bookDiv.addEventListener('click', (e) => {
+      if (e.target.closest('.book-actions')) return;
+      toggleBook(book.id);
+    });
+    c.appendChild(bookDiv);
+
+    // Chapters list
+    const chapDiv = document.createElement('div');
+    chapDiv.className = 'chapters-container' + (isOpen ? ' open' : '');
+    chapDiv.id = `chapters-${book.id}`;
+
+    bookChapters.forEach(ch => {
+      const wordCount = 0; // updated async below
+      const isChActive = ch.id === currentChapterId;
+      const row = document.createElement('div');
+      row.className = 'chapter-row' + (isChActive ? ' active' : '');
+      row.innerHTML = `
+        <span class="chapter-name">${esc(ch.name)}</span>
+        <span class="chapter-count" id="ch-count-${ch.id}">—</span>
+        <div class="chapter-actions">
+          <button class="sb-btn play" onclick="playChapter('${ch.id}',event)" title="Play chapter">▶</button>
+          <button class="sb-btn exp"  onclick="exportChapter('${ch.id}',event)" title="Export">⬇</button>
+          <button class="sb-btn ren"  onclick="openRenameChapterModal('${ch.id}',event)" title="Rename">✎</button>
+          <button class="sb-btn del"  onclick="deleteChapter('${ch.id}',event)" title="Delete">✕</button>
+        </div>
+      `;
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.chapter-actions')) return;
+        selectChapter(ch.id);
+      });
+      chapDiv.appendChild(row);
+    });
+
+    // Add chapter button
+    const addBtn = document.createElement('div');
+    addBtn.style.cssText = 'padding:6px 12px 8px 38px;';
+    addBtn.innerHTML = `<button onclick="openNewChapterModal('${book.id}')" style="background:none;border:1px dashed var(--border2);border-radius:5px;color:var(--muted);font-family:var(--font-body);font-size:0.8rem;padding:5px 12px;cursor:pointer;width:100%;transition:all 0.15s;" onmouseover="this.style.color='var(--gold-lt)';this.style.borderColor='var(--gold)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">＋ Add Chapter</button>`;
+    chapDiv.appendChild(addBtn);
+
+    c.appendChild(chapDiv);
+  });
+
+  // Update chapter word counts async
+  dbGetAll('words').then(allWords => {
+    chapters.forEach(ch => {
+      const el = document.getElementById(`ch-count-${ch.id}`);
+      if (el) el.textContent = allWords.filter(w => w.chapterId === ch.id).length;
+    });
+  });
+}
+
+function toggleBook(bookId) {
+  if (currentBookId === bookId) {
+    // Collapse
+    currentBookId    = null;
+    currentChapterId = null;
+    currentWords     = [];
+    selectedWordIds.clear();
+    showNoListState();
+  } else {
+    currentBookId    = bookId;
+    currentChapterId = null;
+    currentWords     = [];
+    selectedWordIds.clear();
+    showBookState();
+  }
+  renderSidebar();
+  updateTopbar();
+}
+
+async function selectChapter(chapterId) {
+  const ch = chapters.find(c => c.id === chapterId);
+  if (!ch) return;
+  currentBookId    = ch.bookId;
+  currentChapterId = chapterId;
+  selectedWordIds.clear();
+  const allWords = await dbGetAll('words');
+  currentWords   = allWords.filter(w => w.chapterId === chapterId);
+  currentWords.sort((a,b) => a.greek.localeCompare(b.greek));
+  renderSidebar();
+  updateTopbar();
+  renderWords();
+  updateReviewBadge();
+  if (window.innerWidth <= 680) closeSidebar();
+}
+
+function updateTopbar() {
+  const book = books.find(b => b.id === currentBookId);
+  const ch   = chapters.find(c => c.id === currentChapterId);
+  const titleEl    = document.getElementById('current-title');
+  const subtitleEl = document.getElementById('current-subtitle');
+
+  if (ch) {
+    titleEl.textContent = ch.name;
+    subtitleEl.textContent = book ? book.name : '';
+    subtitleEl.style.display = '';
+  } else if (book) {
+    titleEl.textContent = book.name;
+    subtitleEl.style.display = 'none';
+  } else {
+    titleEl.textContent = 'Select a book';
+    subtitleEl.style.display = 'none';
+  }
+
+  const hasChapter = !!currentChapterId;
+  document.getElementById('btn-add-word').style.display  = hasChapter ? '' : 'none';
+  document.getElementById('btn-tts-toggle').style.display = currentBookId ? '' : 'none';
+  document.getElementById('btn-play').disabled = currentWords.length === 0 && !currentBookId;
+  updateReviewBadge();
+}
+
+function showNoListState() {
+  document.getElementById('no-list-state').style.display = 'flex';
+  document.getElementById('empty-state').style.display   = 'none';
+  document.getElementById('words-grid').style.display    = 'none';
+  document.getElementById('btn-add-word').style.display  = 'none';
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('btn-review').style.display = 'none';
+}
+
+function showBookState() {
+  // Book selected but no chapter — show empty state with prompt
+  document.getElementById('no-list-state').style.display = 'none';
+  document.getElementById('empty-state').style.display   = 'flex';
+  document.getElementById('words-grid').style.display    = 'none';
+}
+
+// ─────────────────────────────────────────
+//  Word rendering
+// ─────────────────────────────────────────
+function renderWords() {
+  const grid  = document.getElementById('words-grid');
+  const empty = document.getElementById('empty-state');
+  const noList= document.getElementById('no-list-state');
+  noList.style.display = 'none';
+  if (currentWords.length === 0) {
+    grid.style.display  = 'none';
+    empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    grid.style.display  = 'grid';
+    grid.innerHTML = '';
+    currentWords.forEach(w => {
+      const isSel = selectedWordIds.has(w.id);
+      const card  = document.createElement('div');
+      card.className = 'word-card' + (isSel ? ' selected' : '');
+      card.dataset.id = w.id;
+      card.innerHTML = `
+        <div class="word-check">✓</div>
+        <div class="word-greek">${esc(w.greek)}</div>
+        <div class="word-english">${esc(w.english)}</div>
+        ${w.phonetic ? `<div class="word-phonetic">${esc(w.phonetic)}</div>` : ''}
+        <div class="word-footer">
+          ${srBadgeHTML(w.id)}
+          <span class="word-audio-badge ${w.hasAudio?'has-audio':'no-audio'}">${w.hasAudio?'♪ Audio':'○ No audio'}</span>
+          <div class="word-actions">
+            ${w.hasAudio?`<button onclick="previewAudio('${w.id}');event.stopPropagation()" title="Play">▶</button>`:''}
+            <button onclick="openEditWordModal('${w.id}');event.stopPropagation()" title="Edit">✎</button>
+            <button class="del" onclick="deleteWord('${w.id}');event.stopPropagation()" title="Delete">✕</button>
+          </div>
+        </div>
+      `;
+      card.addEventListener('click', () => toggleWordSelection(w.id));
+      grid.appendChild(card);
+    });
+  }
+  document.getElementById('btn-play').disabled = currentWords.length === 0;
+  updateSelectionBar();
+}
+
+function toggleWordSelection(id) {
+  if (selectedWordIds.has(id)) selectedWordIds.delete(id); else selectedWordIds.add(id);
+  const card = document.querySelector(`.word-card[data-id="${id}"]`);
+  if (card) card.classList.toggle('selected', selectedWordIds.has(id));
+  updateSelectionBar();
+}
+function selectAllWords()  { currentWords.forEach(w => selectedWordIds.add(w.id)); renderWords(); }
+function clearSelection()  { selectedWordIds.clear(); renderWords(); }
+function updateSelectionBar() {
+  const count  = selectedWordIds.size;
+  const selBar = document.getElementById('selection-bar');
+  const defBar = document.getElementById('default-bar');
+  if (count > 0) {
+    selBar.classList.add('visible');
+    defBar.style.display = 'none';
+    document.getElementById('sel-count').textContent = `${count} word${count!==1?'s':''} selected`;
+  } else {
+    selBar.classList.remove('visible');
+    defBar.style.display = 'flex';
+  }
+}
+
+// ─────────────────────────────────────────
+//  Modals
+// ─────────────────────────────────────────
+function showModal(html) {
+  const c = document.getElementById('modal-container');
+  c.innerHTML = `<div class="modal-overlay" onclick="closeModalOnOverlay(event)">${html}</div>`;
+}
+function closeModalOnOverlay(e) { if (e.target.classList.contains('modal-overlay')) closeModal(); }
+function closeModal() { document.getElementById('modal-container').innerHTML = ''; pendingAudioBlob = null; editingWordId = null; }
+
+// Book modals
+function openNewBookModal() {
+  showModal(`<div class="modal">
+    <h2>New Book</h2>
+    <div class="form-group"><label>Book Name</label>
+      <input type="text" id="new-book-name" placeholder="e.g. 1 Timothy" autofocus></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="createBook()">Create</button>
+    </div></div>`);
+  setTimeout(() => document.getElementById('new-book-name')?.focus(), 50);
+}
+async function createBook() {
+  const name = document.getElementById('new-book-name').value.trim();
+  if (!name) return;
+  const book = { id: uid(), name };
+  await dbPut('books', book);
+  fbPut('books', book);
+  books.push(book);
+  books.sort((a,b) => a.name.localeCompare(b.name));
+  closeModal();
+  renderSidebar();
+}
+
+function openRenameBookModal(id, e) {
+  e.stopPropagation();
+  const book = books.find(b => b.id === id);
+  if (!book) return;
+  showModal(`<div class="modal">
+    <h2>Rename Book</h2>
+    <div class="form-group"><label>Book Name</label>
+      <input type="text" id="rename-input" value="${esc(book.name)}" autofocus></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="renameBook('${id}')">Save</button>
+    </div></div>`);
+  setTimeout(() => { const el = document.getElementById('rename-input'); if(el){el.focus();el.select();} }, 50);
+}
+async function renameBook(id) {
+  const name = document.getElementById('rename-input').value.trim();
+  if (!name) return;
+  const book = books.find(b => b.id === id);
+  if (!book) return;
+  book.name = name;
+  await dbPut('books', book);
+  fbPut('books', book);
+  closeModal();
+  renderSidebar();
+  if (id === currentBookId) updateTopbar();
+}
+
+async function deleteBook(id, e) {
+  e.stopPropagation();
+  const book = books.find(b => b.id === id);
+  if (!confirm(`Delete "${book?.name}" and all its chapters and words?`)) return;
+  const bookChapters = chapters.filter(c => c.bookId === id);
+  for (const ch of bookChapters) {
+    const allWords = await dbGetAll('words');
+    for (const w of allWords.filter(w => w.chapterId === ch.id)) {
+      await dbDelete('words', w.id); await dbDelete('audio', w.id);
+      fbDel('words', w.id); fbDel('audio', w.id);
+    }
+    await dbDelete('chapters', ch.id); fbDel('chapters', ch.id);
+  }
+  await dbDelete('books', id); fbDel('books', id);
+  books    = books.filter(b => b.id !== id);
+  chapters = chapters.filter(c => c.bookId !== id);
+  if (currentBookId === id) { currentBookId=null; currentChapterId=null; currentWords=[]; showNoListState(); }
+  renderSidebar(); updateTopbar();
+}
+
+// Chapter modals
+function openNewChapterModal(bookId) {
+  const book = books.find(b => b.id === bookId);
+  const bookChapters = chapters.filter(c => c.bookId === bookId);
+  const nextNum = bookChapters.length + 1;
+  showModal(`<div class="modal">
+    <h2>Add Chapter</h2>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:14px">Book: ${esc(book?.name||'')}</p>
+    <div class="form-group"><label>Chapter Name</label>
+      <input type="text" id="new-chapter-name" value="Chapter ${nextNum}" autofocus></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="createChapter('${bookId}')">Create</button>
+    </div></div>`);
+  setTimeout(() => { const el = document.getElementById('new-chapter-name'); if(el){el.focus();el.select();} }, 50);
+}
+async function createChapter(bookId) {
+  const name = document.getElementById('new-chapter-name').value.trim();
+  if (!name) return;
+  const bookChapters = chapters.filter(c => c.bookId === bookId);
+  const chapter = { id: uid(), bookId, name, order: bookChapters.length };
+  await dbPut('chapters', chapter);
+  fbPut('chapters', chapter);
+  chapters.push(chapter);
+  closeModal();
+  renderSidebar();
+  selectChapter(chapter.id);
+}
+
+function openRenameChapterModal(id, e) {
+  e.stopPropagation();
+  const ch = chapters.find(c => c.id === id);
+  if (!ch) return;
+  showModal(`<div class="modal">
+    <h2>Rename Chapter</h2>
+    <div class="form-group"><label>Chapter Name</label>
+      <input type="text" id="rename-input" value="${esc(ch.name)}" autofocus></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="renameChapter('${id}')">Save</button>
+    </div></div>`);
+  setTimeout(() => { const el = document.getElementById('rename-input'); if(el){el.focus();el.select();} }, 50);
+}
+async function renameChapter(id) {
+  const name = document.getElementById('rename-input').value.trim();
+  if (!name) return;
+  const ch = chapters.find(c => c.id === id);
+  if (!ch) return;
+  ch.name = name;
+  await dbPut('chapters', ch);
+  fbPut('chapters', ch);
+  closeModal();
+  renderSidebar();
+  if (id === currentChapterId) updateTopbar();
+}
+
+async function deleteChapter(id, e) {
+  e.stopPropagation();
+  const ch = chapters.find(c => c.id === id);
+  if (!confirm(`Delete chapter "${ch?.name}" and all its words?`)) return;
+  const allWords = await dbGetAll('words');
+  for (const w of allWords.filter(w => w.chapterId === id)) {
+    await dbDelete('words', w.id); await dbDelete('audio', w.id);
+    fbDel('words', w.id); fbDel('audio', w.id);
+  }
+  await dbDelete('chapters', id); fbDel('chapters', id);
+  chapters = chapters.filter(c => c.id !== id);
+  if (currentChapterId === id) { currentChapterId=null; currentWords=[]; showBookState(); updateTopbar(); }
+  renderSidebar();
+}
+
+// Word modals
+function openAddWordModal() {
+  if (!currentChapterId) return;
+  editingWordId = null; pendingAudioBlob = null;
+  showModal(`<div class="modal">
+    <h2>Add Word</h2>
+    <div class="form-group"><label>Greek Word</label>
+      <input type="text" id="word-greek" class="greek-input" placeholder="e.g. λόγος" autofocus></div>
+    <div class="form-group"><label>English Definition</label>
+      <input type="text" id="word-english" placeholder="e.g. word, message, reason"></div>
+    <div class="form-group"><label>Phonetic Spelling <span style="color:var(--muted);font-size:0.8rem">(optional)</span></label>
+      <input type="text" id="word-phonetic" placeholder="e.g. EH-pee-meh-leh-OH-my"></div>
+    <div class="form-group"><label>Audio File</label>
+      <input type="file" id="word-audio" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.mp4,.caf" onchange="handleAudioSelect(event)">
+      <div id="audio-preview-area"></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveWord()">Add Word</button>
+    </div></div>`);
+  setTimeout(() => document.getElementById('word-greek')?.focus(), 50);
+}
+
+async function openEditWordModal(id) {
+  const word = currentWords.find(w => w.id === id);
+  if (!word) return;
+  editingWordId = id; pendingAudioBlob = null;
+  const audioRec = await dbGet('audio', id);
+  showModal(`<div class="modal">
+    <h2>Edit Word</h2>
+    <div class="form-group"><label>Greek Word</label>
+      <input type="text" id="word-greek" class="greek-input" value="${esc(word.greek)}" autofocus></div>
+    <div class="form-group"><label>English Definition</label>
+      <input type="text" id="word-english" value="${esc(word.english)}"></div>
+    <div class="form-group"><label>Phonetic Spelling <span style="color:var(--muted);font-size:0.8rem">(optional)</span></label>
+      <input type="text" id="word-phonetic" value="${esc(word.phonetic||'')}"></div>
+    <div class="form-group"><label>Audio File ${word.hasAudio?'(has audio — replace below)':''}</label>
+      <input type="file" id="word-audio" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac,.mp4,.caf" onchange="handleAudioSelect(event)">
+      <div id="audio-preview-area">
+        ${audioRec?`<div class="audio-preview">♪ Audio attached &nbsp;<button onclick="previewAudio('${id}')">▶ Play</button><button onclick="removeAudio('${id}')">✕ Remove</button></div>`:''}
+      </div></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveWord()">Save</button>
+    </div></div>`);
+}
+
+function handleAudioSelect(e) {
+  const file = e.target.files[0]; if (!file) return;
+  pendingAudioBlob = file;
+  const url = URL.createObjectURL(file);
+  document.getElementById('audio-preview-area').innerHTML =
+    `<div class="audio-preview">♪ ${esc(file.name)} &nbsp;<button onclick="playBlobAudio('${url}')">▶ Play</button></div>`;
+}
+function playBlobAudio(url) { try { const ctx=getAudioContext(); fetch(url).then(r=>r.arrayBuffer()).then(ab=>decodeAudio(ctx,ab)).then(buf=>{const s=ctx.createBufferSource();s.buffer=buf;s.connect(getAudioDestination());s.start(0);}); } catch(e){} }
+
+async function saveWord() {
+  const greek    = document.getElementById('word-greek').value.trim();
+  const english  = document.getElementById('word-english').value.trim();
+  const phonetic = document.getElementById('word-phonetic').value.trim();
+  if (!greek || !english) { toast('Please fill in Greek and English fields.'); return; }
+
+  if (editingWordId) {
+    const word = currentWords.find(w => w.id === editingWordId);
+    word.greek = greek; word.english = english; word.phonetic = phonetic;
+    if (pendingAudioBlob) {
+      const buf = await pendingAudioBlob.arrayBuffer();
+      await dbPut('audio', {wordId:word.id, data:buf, type:pendingAudioBlob.type});
+      word.hasAudio = true;
+      fbPutAudio(word.id, buf, pendingAudioBlob.type);
+    }
+    await dbPut('words', word); fbPut('words', word);
+  } else {
+    const word = { id:uid(), chapterId:currentChapterId, bookId:currentBookId, greek, english, phonetic, hasAudio:false };
+    if (pendingAudioBlob) {
+      const buf = await pendingAudioBlob.arrayBuffer();
+      await dbPut('audio', {wordId:word.id, data:buf, type:pendingAudioBlob.type});
+      word.hasAudio = true;
+      fbPutAudio(word.id, buf, pendingAudioBlob.type);
+    }
+    await dbPut('words', word); fbPut('words', word);
+    currentWords.push(word);
+    currentWords.sort((a,b) => a.greek.localeCompare(b.greek));
+  }
+  closeModal(); renderSidebar(); renderWords();
+}
+
+async function removeAudio(wordId) {
+  await dbDelete('audio', wordId); fbDel('audio', wordId);
+  const word = currentWords.find(w => w.id === wordId);
+  if (word) { word.hasAudio = false; await dbPut('words', word); fbPut('words', word); }
+  closeModal(); renderWords();
+}
+
+async function deleteWord(id) {
+  if (!confirm('Delete this word?')) return;
+  await dbDelete('words', id); await dbDelete('audio', id);
+  fbDel('words', id); fbDel('audio', id);
+  currentWords = currentWords.filter(w => w.id !== id);
+  renderSidebar(); renderWords();
+}
+
+async function previewAudio(wordId) {
+  const rec = await dbGet('audio', wordId); if (!rec) return;
+  try {
+    const ctx = getAudioContext();
+    const ab  = rec.data instanceof ArrayBuffer ? rec.data.slice(0) : await new Blob([rec.data]).arrayBuffer();
+    const buf = await decodeAudio(ctx, ab);
+    const src = ctx.createBufferSource(); src.buffer = buf; src.connect(getAudioDestination()); src.start(0);
+  } catch(e) { console.warn('previewAudio error',e); }
+}
+
+// ─────────────────────────────────────────
+//  Player
+// ─────────────────────────────────────────
+let playerWords   = [];
+let playerWordSet = [];
+let playerIndex   = 0;
+let playerLoop    = 1;
+let playerMode    = 0;
+let playerSpeed   = 3;
+let playerPlaying = false;
+let playerShuffled = false;
+let playerTimer   = null;
+let playerTimerStart = null;
+let playerTimerDuration = 0;
+let playerAudio   = null;
+let playerAnimFrame = null;
+
+async function openPlayer(wordSet) {
+  const ws = wordSet || currentWords;
+  if (!ws || ws.length === 0) return;
+  playerWordSet = [...ws];
+  playerWords   = [...playerWordSet];
+  if (playerShuffled) shuffle(playerWords);
+  playerIndex = 0; playerLoop = 1; playerPlaying = true;
+
+  // iOS TTS unlock inside user gesture
+  if (ttsEnabled && window.speechSynthesis) {
+    const p = new SpeechSynthesisUtterance(''); p.volume = 0;
+    window.speechSynthesis.cancel(); window.speechSynthesis.speak(p);
+  }
+  // iOS Bluetooth audio unlock
+  const sa = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+  sa.volume = 0.001; sa.play().catch(()=>{});
+
+  document.getElementById('player-overlay').classList.remove('hidden');
+  document.getElementById('player-list-name').textContent = getPlayerTitle(wordSet);
+  document.getElementById('btn-playpause').textContent = '⏸';
+  document.getElementById('btn-shuffle').classList.toggle('shuffled', playerShuffled);
+  updateModeButtons(); updateSpeedDisplay(); startTTSKeepAlive();
+  await showCurrentCard();
+}
+
+function getPlayerTitle(wordSet) {
+  const ch   = chapters.find(c => c.id === currentChapterId);
+  const book = books.find(b => b.id === currentBookId);
+  if (wordSet && selectedWordIds.size > 0) return `${ch?.name||''} — ${selectedWordIds.size} selected`.toUpperCase();
+  if (ch)   return `${book?.name||''} · ${ch.name}`.toUpperCase();
+  if (book) return book.name.toUpperCase();
+  return '';
+}
+
+async function playBook(bookId, e) {
+  e.stopPropagation();
+  const allWords = await dbGetAll('words');
+  const bookWords = allWords.filter(w => w.bookId === bookId);
+  if (bookWords.length === 0) { toast('No words in this book yet.'); return; }
+  currentBookId = bookId; currentChapterId = null; currentWords = bookWords;
+  openPlayer(bookWords);
+}
+
+async function playChapter(chapterId, e) {
+  e.stopPropagation();
+  await selectChapter(chapterId);
+  openPlayer(currentWords);
+}
+
+function openPlayerWithSelection() {
+  const selected = currentWords.filter(w => selectedWordIds.has(w.id));
+  if (selected.length === 0) return;
+  openPlayer(selected);
+}
+
+function closePlayer() {
+  stopPlayerTimer(); stopTTSKeepAlive();
+  if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  cancelAnimationFrame(playerAnimFrame);
+  document.getElementById('player-overlay').classList.add('hidden');
+  playerPlaying = false;
+}
+
+function updateProgress() {
+  const total = playerWords.length, cur = playerIndex + 1;
+  const pct   = total ? Math.round((cur/total)*100) : 0;
+  document.getElementById('progress-bar-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${cur} / ${total}`;
+  document.getElementById('progress-pct').textContent = playerLoop > 1 ? `Pass ${playerLoop}` : `${pct}%`;
+}
+
+async function showCurrentCard() {
+  if (!playerWords.length) return;
+  const word = playerWords[playerIndex];
+  updateProgress(); stopPlayerTimer();
+  const primary   = document.getElementById('card-primary');
+  const secondary = document.getElementById('card-secondary');
+  const label     = document.getElementById('card-label');
+  secondary.className = 'card-secondary'; secondary.textContent = '';
+  const halfMs = Math.round(playerSpeed * 500);
+  const fullMs = playerSpeed * 1000;
+
+  if (playerMode === 0) {
+    label.textContent = 'Greek'; primary.className = 'card-primary'; primary.textContent = word.greek;
+    playWordAudio(word);
+    await timedPauseAnimated(halfMs); if (!playerPlaying) return;
+    if (ttsEnabled) { secondary.className = 'card-secondary visible'; secondary.textContent = word.english; label.textContent = 'Greek — English'; speakEnglish(word); }
+    await startAutoAdvance(halfMs);
+  } else if (playerMode === 1) {
+    label.textContent = ttsEnabled ? 'English' : 'Greek';
+    primary.className = ttsEnabled ? 'card-primary eng' : 'card-primary';
+    primary.textContent = ttsEnabled ? word.english : word.greek;
+    if (ttsEnabled) speakEnglish(word); else playWordAudio(word);
+    await timedPauseAnimated(halfMs); if (!playerPlaying) return;
+    if (ttsEnabled) { secondary.className = 'card-secondary visible greek-sec'; secondary.textContent = word.greek; label.textContent = 'English — Greek'; playWordAudio(word); }
+    await startAutoAdvance(halfMs);
+  } else if (playerMode === 2) {
+    if (ttsEnabled) { label.textContent = 'English'; primary.className = 'card-primary eng'; primary.textContent = word.english; speakEnglish(word); }
+    else { label.textContent = 'Greek'; primary.className = 'card-primary'; primary.textContent = word.greek; playWordAudio(word); }
+    await startAutoAdvance(fullMs);
+  } else {
+    label.textContent = 'Greek'; primary.className = 'card-primary'; primary.textContent = word.greek;
+    playWordAudio(word); if (!playerPlaying) return;
+    await startAutoAdvance(fullMs);
+  }
+}
+
+function playWordAudio(word) {
+  return new Promise(async res => {
+    if (!word.hasAudio) { res(); return; }
+    const rec = await dbGet('audio', word.id); if (!rec) { res(); return; }
+    try {
+      const ctx = getAudioContext();
+      const ab  = rec.data instanceof ArrayBuffer ? rec.data.slice(0) : await new Blob([rec.data]).arrayBuffer();
+      const buf = await decodeAudio(ctx, ab);
+      const src = ctx.createBufferSource(); src.buffer = buf; src.connect(getAudioDestination());
+      document.getElementById('audio-indicator').classList.add('playing');
+      src.onended = () => { document.getElementById('audio-indicator').classList.remove('playing'); res(); };
+      playerAudio = src; src.start(0);
+    } catch(e) { console.warn('playWordAudio error',e); res(); }
+  });
+}
+
+function timedPauseAnimated(ms) {
+  return new Promise(res => {
+    if (!playerPlaying) { res(); return; }
+    playerTimerStart = Date.now();
+    function tick() {
+      if (!playerPlaying) { res(); return; }
+      const el = Date.now() - playerTimerStart;
+      document.getElementById('timer-bar-fill').style.width = Math.min(100,(el/ms)*100) + '%';
+      if (el >= ms) { document.getElementById('timer-bar-fill').style.width = '0%'; res(); return; }
+      playerAnimFrame = requestAnimationFrame(tick);
+    }
+    playerAnimFrame = requestAnimationFrame(tick);
+  });
+}
+
+function startAutoAdvance(durationMs) {
+  return new Promise(res => {
+    if (!playerPlaying) { res(); return; }
+    const dur = durationMs !== undefined ? durationMs : playerSpeed * 1000;
+    playerTimerStart = Date.now();
+    function tick() {
+      if (!playerPlaying) { res(); return; }
+      const el = Date.now() - playerTimerStart;
+      document.getElementById('timer-bar-fill').style.width = Math.min(100,(el/dur)*100) + '%';
+      if (el >= dur) { document.getElementById('timer-bar-fill').style.width = '0%'; res(); advanceNext(); return; }
+      playerAnimFrame = requestAnimationFrame(tick);
+    }
+    playerAnimFrame = requestAnimationFrame(tick);
+    playerTimer = { resolve: res };
+  });
+}
+
+function stopPlayerTimer() {
+  clearTimeout(playerTimer); cancelAnimationFrame(playerAnimFrame);
+  document.getElementById('timer-bar-fill').style.width = '0%';
+}
+
+async function advanceNext() {
+  if (!playerPlaying) return;
+  if (playerIndex < playerWords.length - 1) { playerIndex++; await showCurrentCard(); }
+  else {
+    playerLoop++;
+    if (playerShuffled) shuffle(playerWords); else playerWords = [...playerWordSet];
+    playerIndex = 0; await showCurrentCard();
+  }
+}
+
+async function togglePlayPause() {
+  if (playerPlaying) {
+    playerPlaying = false; stopPlayerTimer();
+    if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    document.getElementById('btn-playpause').textContent = '▶';
+    document.getElementById('audio-indicator').classList.remove('playing');
+  } else {
+    playerPlaying = true; document.getElementById('btn-playpause').textContent = '⏸';
+    await showCurrentCard();
+  }
+}
+
+async function playerPrev() {
+  stopPlayerTimer(); cancelAnimationFrame(playerAnimFrame);
+  if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  document.getElementById('audio-indicator').classList.remove('playing');
+  if (playerIndex > 0) playerIndex--;
+  if (!playerPlaying) { playerPlaying = true; document.getElementById('btn-playpause').textContent = '⏸'; }
+  await showCurrentCard();
+}
+async function playerNext() {
+  stopPlayerTimer(); cancelAnimationFrame(playerAnimFrame);
+  if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  document.getElementById('audio-indicator').classList.remove('playing');
+  if (playerIndex < playerWords.length - 1) playerIndex++;
+  if (!playerPlaying) { playerPlaying = true; document.getElementById('btn-playpause').textContent = '⏸'; }
+  await showCurrentCard();
+}
+
+function setMode(m) {
+  playerMode = m; updateModeButtons(); stopPlayerTimer(); cancelAnimationFrame(playerAnimFrame);
+  if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+  document.getElementById('audio-indicator').classList.remove('playing');
+  if (playerPlaying) showCurrentCard();
+}
+function updateModeButtons() { [0,1,2,3].forEach(i => document.getElementById(`mode-${i}`)?.classList.toggle('active', i===playerMode)); }
+
+function updateSpeed(v) { playerSpeed = parseInt(v); updateSpeedDisplay(); }
+function updateSpeedDisplay() { const s=playerSpeed; document.getElementById('speed-val').textContent = `${s} second${s!==1?'s':''}`; }
+
+function toggleShuffle() {
+  playerShuffled = !playerShuffled;
+  document.getElementById('btn-shuffle').classList.toggle('shuffled', playerShuffled);
+  playerWords = [...playerWordSet]; if (playerShuffled) shuffle(playerWords);
+  playerIndex = 0; playerLoop = 1;
+  stopPlayerTimer(); cancelAnimationFrame(playerAnimFrame);
+  if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  document.getElementById('audio-indicator').classList.remove('playing');
+  if (playerPlaying) setTimeout(() => { if (playerPlaying) showCurrentCard(); }, 50);
+}
+
+// ─────────────────────────────────────────
+//  TTS
+// ─────────────────────────────────────────
+let ttsEnabled = false, ttsVoice = null, ttsRate = 1.0, ttsVolume = 1.0, ttsVoices = [];
+let _ttsKeepAliveTimer = null;
+
+function loadTTSVoices() {
+  ttsVoices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  const sel = document.getElementById('tts-voice-select'); if (!sel) return;
+  sel.innerHTML = '';
+  ttsVoices.forEach((v,i) => { const o=document.createElement('option'); o.value=i; o.textContent=`${v.name} (${v.lang})`; if(v.default)o.selected=true; sel.appendChild(o); });
+  const saved = localStorage.getItem('ttsVoiceName');
+  if (saved) { const idx=ttsVoices.findIndex(v=>v.name===saved); if(idx>=0){sel.value=idx;ttsVoice=ttsVoices[idx];} }
+  if (!ttsVoice && ttsVoices.length) ttsVoice = ttsVoices[sel.value]||ttsVoices[0];
+  updateTtsUI();
+}
+function ttsToggled() {
+  ttsEnabled = document.getElementById('tts-enabled').checked;
+  updateTtsUI();
+  if (ttsEnabled && ttsVoices.length === 0) loadTTSVoices();
+  if (ttsEnabled && window.speechSynthesis) { const p=new SpeechSynthesisUtterance('');p.volume=0;window.speechSynthesis.cancel();window.speechSynthesis.speak(p); }
+}
+function ttsVoiceChanged() { const i=document.getElementById('tts-voice-select').value; ttsVoice=ttsVoices[i]; if(ttsVoice)localStorage.setItem('ttsVoiceName',ttsVoice.name); }
+function ttsRateChanged(v) { ttsRate=parseFloat(v); document.getElementById('tts-rate-val').textContent=ttsRate.toFixed(1)+'×'; }
+function ttsVolChanged(v) { ttsVolume=parseFloat(v); document.getElementById('tts-vol-val').textContent=Math.round(ttsVolume*100)+'%'; }
+function topbarTtsToggle() {
+  ttsEnabled = !ttsEnabled;
+  const cb = document.getElementById('tts-enabled'); if(cb) cb.checked = ttsEnabled;
+  updateTtsUI();
+  if (ttsEnabled) { if(ttsVoices.length===0)loadTTSVoices(); if(window.speechSynthesis){const p=new SpeechSynthesisUtterance('');p.volume=0;window.speechSynthesis.cancel();window.speechSynthesis.speak(p);} }
+}
+function updateTtsUI() {
+  const btn=document.getElementById('btn-tts-toggle'); if(btn){btn.textContent=ttsEnabled?'🔊':'🔇';btn.style.opacity=ttsEnabled?'1':'0.5';}
+  const v=document.getElementById('tts-voice-select'),r=document.getElementById('tts-rate-wrap');
+  if(v)v.style.display=ttsEnabled?'':'none'; if(r)r.style.display=ttsEnabled?'':'none';
+}
+function speakEnglish(textOrWord) {
+  if (!ttsEnabled||!window.speechSynthesis) return;
+  const text = (textOrWord&&textOrWord.phonetic)?textOrWord.phonetic:(textOrWord&&textOrWord.english)?textOrWord.english:textOrWord;
+  try { window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); if(ttsVoice)u.voice=ttsVoice; u.rate=ttsRate;u.lang='en-US';u.volume=ttsVolume; window.speechSynthesis.speak(u); } catch(e){}
+}
+function startTTSKeepAlive() {
+  stopTTSKeepAlive(); if(!window.speechSynthesis) return;
+  _ttsKeepAliveTimer = setInterval(() => { if(window.speechSynthesis&&!window.speechSynthesis.speaking){window.speechSynthesis.pause();window.speechSynthesis.resume();} }, 10000);
+}
+function stopTTSKeepAlive() { if(_ttsKeepAliveTimer){clearInterval(_ttsKeepAliveTimer);_ttsKeepAliveTimer=null;} }
+
+// ─────────────────────────────────────────
+//  Spaced Repetition (SM-2)
+// ─────────────────────────────────────────
+let srData = {};
+let reviewQueue = [], reviewAgainQueue = [], reviewIndex = 0, reviewSessionTotal = 0;
+
+function sm2(quality, repetitions, easiness, interval) {
+  if (quality < 3) { repetitions=0; interval=1; }
+  else {
+    if (repetitions===0) interval=1; else if (repetitions===1) interval=6; else interval=Math.round(interval*easiness);
+    repetitions++;
+    easiness = Math.max(1.3, easiness+0.1-(5-quality)*(0.08+(5-quality)*0.02));
+  }
+  return { repetitions, easiness, interval, dueDate: Date.now()+interval*86400000 };
+}
+function getSR(wordId) { return srData[wordId]||{repetitions:0,easiness:2.5,interval:1,dueDate:0,lastReviewed:0}; }
+function srStatus(wordId) {
+  const d = getSR(wordId);
+  if (!d.lastReviewed) return 'new';
+  if (d.dueDate <= Date.now()) return 'due';
+  return d.repetitions < 2 ? 'learning' : 'review';
+}
+function srBadgeHTML(wordId) {
+  const s = srStatus(wordId);
+  const labels = {new:'○ New',due:'● Due',learning:'↻ Learning',review:'✓ Review'};
+  return `<span class="sr-badge ${s}">${labels[s]}</span>`;
+}
+function intervalLabel(wordId, quality) {
+  const d=getSR(wordId); const r=sm2(quality,d.repetitions,d.easiness,d.interval); const days=r.interval;
+  if(days<2)return '<1d'; if(days<7)return `${days}d`; if(days<30)return `${Math.round(days/7)}w`; return `${Math.round(days/30)}mo`;
+}
+async function loadSRData() { const all=await dbGetAll('sr_data'); srData={}; all.forEach(d=>{srData[d.wordId]=d;}); }
+async function saveSR(wordId, data) {
+  srData[wordId]={wordId,...data}; await dbPut('sr_data',{wordId,...data});
+  if(firestore){try{await firestore.collection('sr_data').doc(wordId).set({wordId,...data});}catch(e){}}
+}
+function setupSRListener() {
+  if (!firestore) return;
+  firestore.collection('sr_data').onSnapshot(snap => {
+    snap.docChanges().forEach(ch => {
+      const d=ch.doc.data();
+      if(ch.type==='added'||ch.type==='modified'){srData[d.wordId]=d;dbPut('sr_data',d);}
+      else if(ch.type==='removed'){delete srData[d.wordId];dbDelete('sr_data',d.wordId);}
+    });
+    updateReviewBadge(); if(currentChapterId) renderWords();
+  }, err=>console.warn('SR listener error',err));
+}
+function dueWords(wordList) { return wordList.filter(w => { const d=getSR(w.id); return !d.lastReviewed||d.dueDate<=Date.now(); }); }
+function updateReviewBadge() {
+  const btn=document.getElementById('btn-review'), cnt=document.getElementById('review-due-count');
+  if (!btn) return;
+  // Review scope depends on context
+  let wordsToCheck = currentWords;
+  const due = dueWords(wordsToCheck);
+  if (due.length > 0) { btn.style.display=''; cnt.textContent=due.length; }
+  else { btn.style.display='none'; }
+}
+
+// Review by chapter (current)
+function openReview() { startReviewSession(currentWords, getPlayerTitle(null)); }
+
+// Review by book
+async function reviewBook(bookId, e) {
+  e.stopPropagation();
+  const allWords = await dbGetAll('words');
+  const bookWords = allWords.filter(w => w.bookId === bookId);
+  const book = books.find(b => b.id === bookId);
+  startReviewSession(bookWords, book?.name?.toUpperCase()||'BOOK REVIEW');
+}
+
+function startReviewSession(wordList, title) {
+  const due = dueWords(wordList);
+  if (due.length === 0) { toast('No words due for review!'); return; }
+  reviewQueue = [...due]; reviewAgainQueue = []; reviewIndex = 0; reviewSessionTotal = due.length;
+  document.getElementById('review-list-name').textContent = title;
+  document.getElementById('review-overlay').classList.remove('hidden');
+  showReviewCard();
+}
+
+function closeReview() {
+  document.getElementById('review-overlay').classList.add('hidden');
+  if (playerAudio) { try { playerAudio.stop(); } catch(e) {} playerAudio = null; }
+  document.getElementById('review-audio-indicator').classList.remove('playing');
+  if (currentChapterId) renderWords();
+  updateReviewBadge();
+}
+
+function showReviewCard() {
+  if (reviewIndex >= reviewQueue.length) {
+    if (reviewAgainQueue.length > 0) { reviewQueue=[...reviewAgainQueue]; reviewAgainQueue=[]; reviewIndex=0; }
+    else {
+      document.getElementById('review-card-label').textContent = 'Complete!';
+      document.getElementById('review-card-greek').textContent = '✓';
+      document.getElementById('review-card-english').textContent = 'All words reviewed!';
+      document.getElementById('review-card-english').classList.remove('hidden');
+      document.getElementById('btn-reveal').style.display = 'none';
+      document.getElementById('review-rating-btns').classList.add('hidden');
+      updateReviewProgress(); return;
+    }
+  }
+  const word = reviewQueue[reviewIndex];
+  document.getElementById('review-card-label').textContent = 'Greek';
+  document.getElementById('review-card-greek').textContent = word.greek;
+  document.getElementById('review-card-english').classList.add('hidden');
+  document.getElementById('review-card-english').textContent = word.english;
+  document.getElementById('btn-reveal').style.display = '';
+  document.getElementById('review-rating-btns').classList.add('hidden');
+  document.getElementById('lbl-hard').textContent = intervalLabel(word.id, 3);
+  document.getElementById('lbl-good').textContent = intervalLabel(word.id, 4);
+  document.getElementById('lbl-easy').textContent = intervalLabel(word.id, 5);
+  updateReviewProgress();
+  playReviewAudio(word);
+}
+
+function playReviewAudio(word) {
+  const ind = document.getElementById('review-audio-indicator');
+  if (!word.hasAudio) { ind.classList.remove('playing'); return; }
+  dbGet('audio', word.id).then(rec => {
+    if (!rec) return;
+    try {
+      const ctx=getAudioContext();
+      const ab=rec.data instanceof ArrayBuffer?rec.data.slice(0):null; if(!ab)return;
+      decodeAudio(ctx,ab).then(buf=>{
+        if(playerAudio){try{playerAudio.stop();}catch(e){}}
+        const src=ctx.createBufferSource(); src.buffer=buf; src.connect(getAudioDestination());
+        ind.classList.add('playing'); src.onended=()=>ind.classList.remove('playing');
+        playerAudio=src; src.start(0);
+      }).catch(()=>{});
+    } catch(e){}
+  });
+}
+
+function revealAnswer() {
+  document.getElementById('review-card-english').classList.remove('hidden');
+  document.getElementById('review-card-label').textContent = 'Greek — English';
+  document.getElementById('btn-reveal').style.display = 'none';
+  document.getElementById('review-rating-btns').classList.remove('hidden');
+  const word = reviewQueue[reviewIndex]; if (word) speakEnglish(word);
+}
+
+async function rateWord(quality) {
+  const word = reviewQueue[reviewIndex]; if (!word) return;
+  const d = getSR(word.id);
+  const result = sm2(quality, d.repetitions, d.easiness, d.interval);
+  await saveSR(word.id, {...result, lastReviewed: Date.now()});
+  if (quality === 0) reviewAgainQueue.push(word);
+  reviewIndex++;
+  showReviewCard();
+}
+
+function updateReviewProgress() {
+  const reviewed = Math.min(reviewIndex, reviewSessionTotal);
+  const pct = reviewSessionTotal ? Math.round((reviewed/reviewSessionTotal)*100) : 0;
+  document.getElementById('review-progress-fill').style.width = pct + '%';
+  document.getElementById('review-progress-text').textContent = `${reviewed} / ${reviewSessionTotal}`;
+}
+
+// ─────────────────────────────────────────
+//  Audio engine
+// ─────────────────────────────────────────
+let _audioCtx = null, _masterGain = null, _audioUnlocked = false;
+
+function getAudioContext() {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    _masterGain = _audioCtx.createGain(); _masterGain.gain.value = 1.0; _masterGain.connect(_audioCtx.destination);
+  }
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+function getAudioDestination() { getAudioContext(); return _masterGain; }
+
+function decodeAudio(ctx, arrayBuf) {
+  return new Promise((res, rej) => {
+    try {
+      const r = ctx.decodeAudioData(arrayBuf, res, rej);
+      if (r && typeof r.then === 'function') r.then(res).catch(rej);
+    } catch(e) { rej(e); }
+  });
+}
+
+function unlockAudio() {
+  if (_audioUnlocked) return; _audioUnlocked = true;
+  try {
+    const silentAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+    silentAudio.volume = 0.001; silentAudio.play().catch(()=>{});
+    const ctx=getAudioContext();
+    const buf=ctx.createBuffer(1,1,22050),src=ctx.createBufferSource();
+    src.buffer=buf; src.connect(getAudioDestination()); src.start(0);
+    const osc=ctx.createOscillator(),sg=ctx.createGain(); sg.gain.value=0.00001;
+    osc.connect(sg); sg.connect(getAudioDestination()); osc.start();
+  } catch(e) {}
+  if (window.speechSynthesis) { const u=new SpeechSynthesisUtterance(''); window.speechSynthesis.speak(u); }
+}
+document.addEventListener('touchstart', unlockAudio, {once:true,passive:true});
+document.addEventListener('click', unlockAudio, {once:true});
+document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible'&&window.speechSynthesis) window.speechSynthesis.cancel(); });
+
+// ─────────────────────────────────────────
+//  Export / Import
+// ─────────────────────────────────────────
+function bufToBase64(buf) { const b=new Uint8Array(buf); let s=''; for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]); return btoa(s); }
+function base64ToBuf(b64) { const s=atob(b64),b=new ArrayBuffer(s.length),u=new Uint8Array(b); for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return b; }
+
+async function buildExportPayload(bookIds) {
+  const allWords=await dbGetAll('words'), allChapters=await dbGetAll('chapters');
+  const payload={version:2,books:[],chapters:[],words:[],audio:[]};
+  for (const id of bookIds) {
+    const book=books.find(b=>b.id===id); if(book) payload.books.push(book);
+    const bChapters=allChapters.filter(c=>c.bookId===id); payload.chapters.push(...bChapters);
+    const bWords=allWords.filter(w=>w.bookId===id); payload.words.push(...bWords);
+    for (const w of bWords) {
+      if (w.hasAudio) {
+        const rec=await dbGet('audio',w.id); if(rec){const ab=rec.data instanceof ArrayBuffer?rec.data:await new Blob([rec.data]).arrayBuffer(); payload.audio.push({wordId:w.id,type:rec.type,data:bufToBase64(ab)});}
+      }
+    }
+  }
+  return payload;
+}
+
+function downloadJSON(payload, filename) {
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'}),url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+}
+
+async function exportAll() {
+  if(books.length===0){toast('No books to export.');return;}
+  toast('Preparing export…');
+  const payload=await buildExportPayload(books.map(b=>b.id));
+  downloadJSON(payload,`lexikon-all-${new Date().toISOString().slice(0,10)}.json`);
+  toast('Export downloaded!');
+}
+
+async function exportBook(id, e) {
+  e.stopPropagation();
+  const book=books.find(b=>b.id===id); if(!book)return;
+  toast('Preparing export…');
+  const payload=await buildExportPayload([id]);
+  downloadJSON(payload,`lexikon-${book.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()}.json`);
+  toast(`"${book.name}" exported!`);
+}
+
+async function exportChapter(id, e) {
+  e.stopPropagation();
+  const ch=chapters.find(c=>c.id===id); if(!ch)return;
+  const allWords=await dbGetAll('words');
+  const chWords=allWords.filter(w=>w.chapterId===id);
+  const payload={version:2,books:[books.find(b=>b.id===ch.bookId)],chapters:[ch],words:chWords,audio:[]};
+  for (const w of chWords) {
+    if(w.hasAudio){const rec=await dbGet('audio',w.id);if(rec){const ab=rec.data instanceof ArrayBuffer?rec.data:await new Blob([rec.data]).arrayBuffer();payload.audio.push({wordId:w.id,type:rec.type,data:bufToBase64(ab)});}}
+  }
+  downloadJSON(payload,`lexikon-${ch.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()}.json`);
+  toast(`"${ch.name}" exported!`);
+}
+
+async function importData(event) {
+  const file=event.target.files[0]; if(!file)return;
+  event.target.value='';
+  let payload;
+  try { payload=JSON.parse(await file.text()); } catch(e){toast('Invalid file.');return;}
+  if (!payload.books||!payload.words){toast('Invalid Lexikon export file.');return;}
+  const existingBookIds=new Set(books.map(b=>b.id));
+  const existingChapterIds=new Set(chapters.map(c=>c.id));
+  const existingWordIds=new Set((await dbGetAll('words')).map(w=>w.id));
+  let bAdded=0,cAdded=0,wAdded=0;
+  for (const b of payload.books||[]) { if(!existingBookIds.has(b.id)){await dbPut('books',b);fbPut('books',b);books.push(b);bAdded++;} }
+  for (const c of payload.chapters||[]) { if(!existingChapterIds.has(c.id)){await dbPut('chapters',c);fbPut('chapters',c);chapters.push(c);cAdded++;} }
+  for (const w of payload.words||[]) { if(!existingWordIds.has(w.id)){await dbPut('words',w);fbPut('words',w);wAdded++;} }
+  for (const a of payload.audio||[]) { const ex=await dbGet('audio',a.wordId);if(!ex){const ab=base64ToBuf(a.data);await dbPut('audio',{wordId:a.wordId,data:ab,type:a.type});fbPutAudio(a.wordId,ab,a.type);} }
+  books.sort((a,b)=>a.name.localeCompare(b.name));
+  renderSidebar();
+  toast(`Imported: ${bAdded} book${bAdded!==1?'s':''}, ${cAdded} chapter${cAdded!==1?'s':''}, ${wAdded} word${wAdded!==1?'s':''}.`);
+}
+
+async function pushLocalDataToFirebase() {
+  if (!firestore){toast('Not connected to Firebase.');return;}
+  toast('Uploading to Firebase…');
+  const allBooks=await dbGetAll('books'),allChapters=await dbGetAll('chapters'),allWords=await dbGetAll('words'),allAudio=await dbGetAll('audio');
+  for (const b of allBooks) await firestore.collection('books').doc(b.id).set(b);
+  for (const c of allChapters) await firestore.collection('chapters').doc(c.id).set(c);
+  for (const w of allWords) await firestore.collection('words').doc(w.id).set(w);
+  for (const a of allAudio) { const ab=a.data instanceof ArrayBuffer?a.data:await new Blob([a.data]).arrayBuffer(); await firestore.collection('audio').doc(a.wordId).set({wordId:a.wordId,type:a.type,data:bufToBase64(ab)}); }
+  closeModal();
+  toast(`Upload complete!`);
+}
+
+// ─────────────────────────────────────────
+//  Firebase setup modal
+// ─────────────────────────────────────────
+function openFirebaseSetup() {
+  const cfg = getFirebaseConfig()||{};
+  showModal(`<div class="modal" style="max-width:500px">
+    <h2>☁ Firebase Sync Setup</h2>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:14px;font-size:0.8rem;color:var(--cream-dk);line-height:1.8">
+      <strong style="color:var(--gold-lt)">Setup steps:</strong><br>
+      1. Go to <em>console.firebase.google.com</em> → New project<br>
+      2. Add a Web app → copy the config values<br>
+      3. Enable <strong>Firestore Database</strong> → Start in test mode<br>
+      4. In Firestore → Rules: <code style="color:var(--gold)">allow read, write: if true;</code> → Publish
+    </div>
+    <div class="form-group"><label>API Key</label><input type="text" id="fb-apiKey" value="${esc(cfg.apiKey||'')}" placeholder="AIza..."></div>
+    <div class="form-group"><label>Auth Domain</label><input type="text" id="fb-authDomain" value="${esc(cfg.authDomain||'')}" placeholder="your-project.firebaseapp.com"></div>
+    <div class="form-group"><label>Project ID</label><input type="text" id="fb-projectId" value="${esc(cfg.projectId||'')}" placeholder="your-project-id"></div>
+    <div class="form-group"><label>Messaging Sender ID</label><input type="text" id="fb-messagingSenderId" value="${esc(cfg.messagingSenderId||'')}" placeholder="123456789"></div>
+    <div class="form-group"><label>App ID</label><input type="text" id="fb-appId" value="${esc(cfg.appId||'')}" placeholder="1:123:web:abc..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      ${cfg.apiKey?`<button class="btn btn-ghost" style="color:var(--red)" onclick="disableFirebase()">Disconnect</button>`:''}
+      ${cfg.apiKey?`<button class="btn btn-ghost" style="color:var(--gold)" onclick="pushLocalDataToFirebase()">⬆ Upload Local Data</button>`:''}
+      <button class="btn btn-gold" onclick="saveFirebaseSetup()">Save & Connect</button>
+    </div></div>`);
+}
+function saveFirebaseSetup() {
+  const cfg={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),messagingSenderId:document.getElementById('fb-messagingSenderId').value.trim(),appId:document.getElementById('fb-appId').value.trim()};
+  if(!cfg.apiKey||!cfg.projectId){toast('API Key and Project ID are required.');return;}
+  saveFirebaseConfig(cfg); closeModal(); toast('Config saved — reloading…');
+  setTimeout(()=>location.reload(),1200);
+}
+function disableFirebase() { localStorage.removeItem('lexikon_fb_config'); closeModal(); toast('Disconnected — reloading…'); setTimeout(()=>location.reload(),1200); }
+
+// ─────────────────────────────────────────
+//  Sidebar drawer
+// ─────────────────────────────────────────
+function toggleSidebar() { document.getElementById('sidebar').classList.contains('open') ? closeSidebar() : openSidebar(); }
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-backdrop').classList.add('visible'); document.body.style.overflow='hidden'; }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('visible'); document.body.style.overflow=''; }
+
+// ─────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function shuffle(arr) { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} }
+function toast(msg, dur=2800) { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),dur); }
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') closeModal();
+  if (e.key==='Enter'&&document.getElementById('new-book-name')===document.activeElement) createBook();
+  if (e.key==='Enter'&&document.getElementById('rename-input')===document.activeElement) {
+    const btn=document.querySelector('[onclick^="renameBook"],[onclick^="renameChapter"]');
+    if(btn)btn.click();
+  }
+  if (e.key==='Enter'&&document.getElementById('new-chapter-name')===document.activeElement) {
+    const btn=document.querySelector('[onclick^="createChapter"]'); if(btn)btn.click();
+  }
+  if (e.key==='Enter'&&document.getElementById('word-english')===document.activeElement) saveWord();
+  if (!document.getElementById('player-overlay').classList.contains('hidden')) {
+    if(e.key==='ArrowRight') playerNext();
+    if(e.key==='ArrowLeft')  playerPrev();
+    if(e.key===' '){e.preventDefault();togglePlayPause();}
+  }
+});
+
+if (window.speechSynthesis) { loadTTSVoices(); window.speechSynthesis.onvoiceschanged = loadTTSVoices; }
+
+init();
+</script>
+</body>
+</html>
